@@ -20,12 +20,14 @@ import { LastReadingCard } from "@/components/dashboard/last-reading-card";
 import { WithinTargetCard } from "@/components/dashboard/within-target-card";
 import { HighLowStatsCard } from "@/components/dashboard/high-low-stats-card";
 import { DataQualityCard } from "@/components/dashboard/data-quality-card";
+import { GoalStatusCard } from "@/components/dashboard/goal-status-card";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function OverviewPage() {
     const router = useRouter();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [windowDays, setWindowDays] = useState<7 | 14>(14);
 
     // Stable anchor for SWR key - computed once on mount
     const [{ startDayKey, endDayKey }] = useState(() => getOverviewQueryRange());
@@ -67,55 +69,73 @@ export default function OverviewPage() {
 
     return (
         <div className="space-y-6">
-            <header>
-                <h1 className="text-2xl font-bold text-primary">Oversikt</h1>
-                <p className="text-muted-foreground">Din status for de siste 14 dagene</p>
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-primary">Oversikt</h1>
+                    <p className="text-muted-foreground">Din status for {windowDays === 7 ? "siste 7 dager" : "siste 14 dager"}</p>
+                </div>
+
+                {/* Time Window Segmented Control */}
+                <div className="bg-muted p-1 rounded-lg inline-flex self-start sm:self-center">
+                    <button
+                        onClick={() => setWindowDays(7)}
+                        className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${windowDays === 7 ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                            }`}
+                    >
+                        7 dager
+                    </button>
+                    <button
+                        onClick={() => setWindowDays(14)}
+                        className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${windowDays === 14 ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                            }`}
+                    >
+                        14 dager
+                    </button>
+                </div>
             </header>
 
             {!stats ? (
                 <div className="space-y-4 animate-pulse">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className="card h-28 bg-muted/20" />
-                    ))}
+                    <div className="card h-28 bg-muted/20" />
+                    <div className="card h-40 bg-muted/20" />
                 </div>
             ) : (
                 <>
-
-                    {/* Stats Grid Level 1 */}
+                    {/* Primary Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* Last Reading Widget - Primary Status */}
+                        {/* Last Reading - Always Relevant */}
                         <LastReadingCard lastReading={readings && readings.length > 0 ? readings[readings.length - 1] : null} />
 
-                        {/* High/Low Stats - Compact Context */}
+                        {/* Målstatus - Reactive to Window */}
+                        <GoalStatusCard
+                            windowLabel={windowDays === 7 ? "7 dager" : "14 dager"}
+                            fasting={windowDays === 7
+                                ? (stats.withinTarget.fasting7d ? { ...stats.withinTarget.fasting7d, over: stats.overTargetBreakdown.fasting7d } : null)
+                                : (stats.withinTarget.fasting14d ? { ...stats.withinTarget.fasting14d, over: stats.overTargetBreakdown.fasting14d } : null)
+                            }
+                            postMeal={windowDays === 7
+                                ? (stats.withinTarget.postMeal7d ? { ...stats.withinTarget.postMeal7d, over: stats.overTargetBreakdown.postMeal7d } : null)
+                                : (stats.withinTarget.postMeal14d ? { ...stats.withinTarget.postMeal14d, over: stats.overTargetBreakdown.postMeal14d } : null)
+                            }
+                        />
+                    </div>
+
+                    {/* Secondary Metrics Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* High/Low - Kept as 7d for recent extremes context */}
                         <HighLowStatsCard
                             fasting7d={stats.highLow.fasting7d}
                             postMeal7d={stats.highLow.postMeal7d}
                         />
+
+                        {/* Coverage - Only relevant for 7d completeness anyway */}
+                        <CoverageCard
+                            fastingDays={stats.coverageFasting}
+                            postMealDays={stats.coveragePostMeal}
+                        />
                     </div>
 
-                    {/* Over-Target Count Widget (Secondary) */}
-                    <OverTargetCountCard
-                        count7d={stats.overTargetCount7d}
-                        count14d={stats.overTargetCount14d}
-                        breakdown7d={stats.withinTarget.fasting7d && stats.withinTarget.postMeal7d ? {
-                            fasting: readings7d.filter(r => r.isFasting && parseFloat(r.valueMmolL) > 5.3).length,
-                            postMeal: readings7d.filter(r => r.isPostMeal && parseFloat(r.valueMmolL) > 6.7).length
-                        } : undefined}
-                        breakdown14d={{
-                            fasting: readings?.filter(r => r.isFasting && parseFloat(r.valueMmolL) > 5.3).length ?? 0,
-                            postMeal: readings?.filter(r => r.isPostMeal && parseFloat(r.valueMmolL) > 6.7).length ?? 0
-                        }}
-                    />
-
-                    {/* Within Target Rate (Primary Insight) */}
-                    <WithinTargetCard
-                        fasting7d={stats.withinTarget.fasting7d}
-                        postMeal7d={stats.withinTarget.postMeal7d}
-                        fasting14d={stats.withinTarget.fasting14d}
-                        postMeal14d={stats.withinTarget.postMeal14d}
-                    />
-
-                    {/* Data Quality Indicator (Conditional) */}
+                    {/* Quality Warning if needed */}
                     <DataQualityCard missingTypeCount={stats.qualityMissingTypeCount} />
 
                     {/* Quick Actions */}
@@ -124,12 +144,8 @@ export default function OverviewPage() {
                         onGenerateReport={() => router.push("/settings")}
                     />
 
-                    {/* Coverage and Trend Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <CoverageCard
-                            fastingDays={stats.coverageFasting}
-                            postMealDays={stats.coveragePostMeal}
-                        />
+                    {/* Trend Grid */}
+                    <div className="grid grid-cols-1">
                         <TrendSparklineCard
                             data={trendStats.data}
                             label={trendStats.label}

@@ -12,6 +12,13 @@ export interface DashboardStats {
     overTargetCount7d: number;
     overTargetCount14d: number;
 
+    overTargetBreakdown: {
+        fasting7d: number;
+        postMeal7d: number;
+        fasting14d: number;
+        postMeal14d: number;
+    };
+
     coverageFasting: number; // days 0-7
     coveragePostMeal: number; // days 0-7
     // Iteration 2 additions
@@ -87,6 +94,22 @@ export function computeDashboardStats(
     const overTargetCount14d = readings.filter(isOverTarget).length;
     const overTargetCount7d = readings7d.filter(isOverTarget).length;
 
+    const computeOverCount = (rs: GlucoseReading[], type: 'fasting' | 'postMeal') => {
+        const limit = type === 'fasting' ? THRESHOLDS.FASTING : THRESHOLDS.POST_MEAL;
+        return rs.filter(r => {
+            if (type === 'fasting' && !r.isFasting) return false;
+            if (type === 'postMeal' && !r.isPostMeal) return false;
+            return parseFloat(r.valueMmolL) > limit;
+        }).length;
+    };
+
+    const overTargetBreakdown = {
+        fasting7d: computeOverCount(readings7d, 'fasting'),
+        postMeal7d: computeOverCount(readings7d, 'postMeal'),
+        fasting14d: computeOverCount(readings, 'fasting'),
+        postMeal14d: computeOverCount(readings, 'postMeal'),
+    };
+
     // Coverage (Iteration 1) - days with at least one fasting/post-meal reading in 7d
     const fastingDays = new Set(
         readings7d.filter(r => r.isFasting).map(r => r.dayKey)
@@ -136,6 +159,7 @@ export function computeDashboardStats(
         compliancePercentage,
         overTargetCount7d,
         overTargetCount14d,
+        overTargetBreakdown,
         coverageFasting: fastingDays,
         coveragePostMeal: postMealDays,
         qualityMissingTypeCount,
