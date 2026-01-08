@@ -112,7 +112,7 @@ export default function OverviewPage() {
                             <AlertCircle className="text-amber-600 mt-1 shrink-0" size={20} />
                             <div>
                                 <p className="font-semibold text-amber-900 dark:text-amber-100">Ingen målinger i dag</p>
-                                <p className="text-sm text-amber-800 dark:text-amber-200">Du har ikke logget noen verdier for i dag ennå. Trykk på &quot;+ Ny måling&quot; for å starte.</p>
+                                <p className="text-sm text-amber-800 dark:text-amber-200">Du har ikke logget noen verdier for i dag ennå. Trykk på &quot;Ny måling&quot; for å starte.</p>
                             </div>
                         </div>
                     ) : (

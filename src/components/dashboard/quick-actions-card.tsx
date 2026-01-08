@@ -15,7 +15,7 @@ export function QuickActionsCard({ onAddReading, onGenerateReport }: QuickAction
                 className="btn-primary py-4 flex flex-col items-center justify-center gap-2 rounded-2xl shadow-sm active:scale-[0.98] transition-all"
             >
                 <Plus size={24} />
-                <span className="text-sm font-semibold">+ Ny måling</span>
+                <span className="text-sm font-semibold">Ny måling</span>
             </button>
             <button
                 onClick={onGenerateReport}
