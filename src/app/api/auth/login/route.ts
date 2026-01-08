@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setAuthCookie } from "@/lib/auth/cookies";
-import { getExpectedHash } from "@/lib/auth/middleware";
+import { generateSessionToken } from "@/lib/auth/session";
 
 export async function POST(req: NextRequest) {
     try {
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (password === expectedPassword) {
-            const token = getExpectedHash();
+            const token = await generateSessionToken();
             await setAuthCookie(token);
             return NextResponse.json({ success: true });
         }
@@ -32,3 +32,4 @@ export async function POST(req: NextRequest) {
         );
     }
 }
+

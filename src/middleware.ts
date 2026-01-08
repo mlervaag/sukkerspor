@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isValidSession } from "@/lib/auth/middleware";
+import { isValidSession } from "@/lib/auth/session";
 
 const EXEMPT_PATHS = ["/login", "/api/auth/login", "/api/health", "/favicon.ico"];
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
     const { pathname } = req.nextUrl;
 
-    // Static files and public health
+    // Static files and public paths
     if (
         pathname.startsWith("/_next") ||
         EXEMPT_PATHS.some((path) => pathname === path)
@@ -15,7 +15,7 @@ export function middleware(req: NextRequest) {
     }
 
     const session = req.cookies.get("blodsukker_session")?.value;
-    const authenticated = isValidSession(session);
+    const authenticated = await isValidSession(session);
 
     if (!authenticated) {
         if (pathname.startsWith("/api/")) {
@@ -35,3 +35,4 @@ export function middleware(req: NextRequest) {
 export const config = {
     matcher: "/((?!_next/static|_next/image|favicon.ico).*)",
 };
+
