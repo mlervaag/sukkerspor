@@ -1,3 +1,6 @@
+import { ExportButton } from "@/components/settings/export-button";
+import { ImportFlow } from "@/components/settings/import-flow";
+
 export default function SettingsPage() {
     return (
         <div className="space-y-6">
@@ -7,11 +10,16 @@ export default function SettingsPage() {
             </header>
 
             <div className="space-y-4">
-                <div className="card">
-                    <h2 className="font-semibold mb-1">Eksport og import</h2>
-                    <p className="text-sm text-muted-foreground italic">
-                        Kommer i Iterasjon 4.
+                <div className="card space-y-4">
+                    <h2 className="font-semibold">Eksport og import</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Ta vare på dataene dine eller flytt dem til en annen enhet.
+                        Import vil erstatte all gjeldende data.
                     </p>
+                    <div className="grid grid-cols-1 gap-3">
+                        <ExportButton />
+                        <ImportFlow />
+                    </div>
                 </div>
 
                 <div className="card">
