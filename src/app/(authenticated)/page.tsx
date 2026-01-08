@@ -108,7 +108,7 @@ export default function OverviewPage() {
 
 
 
-                    {/* Prompt/Alert */}
+                    {/* Prompt/Alert - Success State */}
                     {!stats.hasLoggedToday ? (
                         <div className="card bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 flex items-start gap-3">
                             <AlertCircle className="text-amber-600 mt-1 shrink-0" size={20} />
@@ -118,11 +118,11 @@ export default function OverviewPage() {
                             </div>
                         </div>
                     ) : (
-                        <div className="card bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 flex items-start gap-3">
-                            <CheckCircle2 className="text-green-600 mt-1 shrink-0" size={20} />
+                        <div className="card relative overflow-hidden flex items-start gap-3 border-l-4 border-l-green-500">
+                            <CheckCircle2 className="text-green-500 mt-1 shrink-0" size={20} />
                             <div>
-                                <p className="font-semibold text-green-900 dark:text-green-100">Godt jobbet!</p>
-                                <p className="text-sm text-green-800 dark:text-green-200">Du har logget målinger for i dag. Siste måling: {stats.lastLoggedAt ? format(stats.lastLoggedAt, "HH:mm") : ""}</p>
+                                <p className="font-semibold text-foreground">Godt jobbet!</p>
+                                <p className="text-sm text-muted-foreground">Du har logget målinger for i dag. Siste måling: {stats.lastLoggedAt ? format(stats.lastLoggedAt, "HH:mm") : ""}</p>
                             </div>
                         </div>
                     )}
