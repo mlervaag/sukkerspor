@@ -76,7 +76,13 @@ export async function generatePDF(data: {
         }
 
         const type = r.isFasting ? (lang === "no" ? "Fastende" : "Fasting") : (r.isPostMeal ? (lang === "no" ? "Etter måltid" : "Post-meal") : "");
-        const meal = r.mealType ? (t.meal_types as any)[r.mealType] || r.mealType : "";
+        const mealParts = [];
+        if (r.mealType) mealParts.push((t.meal_types as any)[r.mealType] || r.mealType);
+        if (r.foodText) {
+            const truncatedFood = r.foodText.length > 20 ? r.foodText.substring(0, 20) + "..." : r.foodText;
+            mealParts.push(truncatedFood);
+        }
+        const meal = mealParts.join(": ");
         const feeling = r.feelingNotes ? r.feelingNotes.substring(0, 30) + (r.feelingNotes.length > 30 ? "..." : "") : "";
 
         drawRow(page, y, [

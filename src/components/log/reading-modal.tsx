@@ -176,6 +176,21 @@ export function ReadingModal({ isOpen, onClose, onSubmit, initialData, selectedD
                     </div>
                 )}
 
+                {isPostMeal && (
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                            Hva spiste du?
+                        </label>
+                        <input
+                            type="text"
+                            value={foodText}
+                            onChange={(e) => setFoodText(e.target.value)}
+                            className="input w-full"
+                            placeholder="F.eks. brød med ost, kaffe..."
+                        />
+                    </div>
+                )}
+
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                         Notater
