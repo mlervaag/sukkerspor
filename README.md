@@ -21,8 +21,8 @@ A mobile-first blood glucose logging app built with Next.js, Tailwind CSS, and D
 |-------|------------|
 | Framework | Next.js 14 (App Router) |
 | Styling | Tailwind CSS |
-| Database | Neon Postgres + Drizzle ORM |
-| Auth | Edge-compatible HMAC sessions |
+| Database | Neon Postgres + Drizzle ORM (neon-serverless) |
+| Auth | HMAC-signed session cookies |
 | PDF Generation | pdf-lib |
 | Hosting | Vercel |
 
@@ -103,6 +103,7 @@ src/
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run TypeScript checks |
 | `npm test` | Run unit tests |
+| `node scripts/smoke.mjs --password=...` | Run end-to-end smoke tests |
 
 ## API Reference
 
@@ -110,7 +111,8 @@ src/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/readings?date={iso}` | List readings for the week containing the date |
+| GET | `/api/readings?weekStartDayKey={YYYY-MM-DD}` | List readings for the week starting on Monday |
+| GET | `/api/readings?date={iso}` | (Legacy) List readings for week, date normalized to Oslo |
 | POST | `/api/readings` | Create a new reading |
 | GET | `/api/readings/[id]` | Get a single reading |
 | PUT | `/api/readings/[id]` | Update a reading |
