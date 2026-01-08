@@ -58,9 +58,15 @@ export async function listReadingsByWeek(date: Date): Promise<GlucoseReading[]> 
     const start = startOfWeek(date, { weekStartsOn: 1 }); // ISO week starts on Monday
     const end = endOfWeek(date, { weekStartsOn: 1 });
 
+    // Compute day_key range for the week (YYYY-MM-DD format)
+    const startDayKey = computeDayKey(start);
+    const endDayKey = computeDayKey(end);
+
+    // Filter by day_key (Europe/Oslo date) instead of measuredAt (UTC timestamp)
+    // This ensures readings appear on the correct day regardless of timezone
     return db
         .select()
         .from(glucoseReadings)
-        .where(between(glucoseReadings.measuredAt, start, end))
+        .where(between(glucoseReadings.dayKey, startDayKey, endDayKey))
         .orderBy(glucoseReadings.measuredAt);
 }

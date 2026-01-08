@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { format, startOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfWeek, isSameDay } from "date-fns";
+import { format, startOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfWeek } from "date-fns";
 import { nb } from "date-fns/locale";
 import { ReadingCard } from "@/components/log/reading-card";
 import { ReadingModal } from "@/components/log/reading-modal";
@@ -95,16 +95,42 @@ export default function LogPage() {
 
             <div className="space-y-8">
                 {daysInWeek.map((day) => {
-                    const dayReadings = readings?.filter((r) => isSameDay(new Date(r.measuredAt), day)) || [];
-                    const isToday = isSameDay(day, new Date());
+                    // Group by server-provided dayKey (Europe/Oslo), not client-side Date comparison
+                    const dayKeyStr = format(day, "yyyy-MM-dd");
+                    const dayReadings = readings?.filter((r) => r.dayKey === dayKeyStr) || [];
+                    const isToday = format(new Date(), "yyyy-MM-dd") === dayKeyStr;
+
+                    // Day summary calculations
+                    const lastReading = dayReadings.length > 0 ? dayReadings[dayReadings.length - 1] : null;
+                    const hasHighReading = dayReadings.some((r) => {
+                        const val = parseFloat(r.valueMmolL);
+                        if (r.isFasting) return val > 5.3;
+                        if (r.isPostMeal) return val > 6.7;
+                        return false;
+                    });
 
                     return (
-                        <section key={day.toISOString()} className="space-y-3">
+                        <section key={dayKeyStr} className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <h2 className={`text-sm font-bold uppercase tracking-widest ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                                    {format(day, "eeee d. MMMM", { locale: nb })}
-                                    {isToday && <span className="ml-2 text-[10px] bg-primary/10 px-2 py-0.5 rounded-full">IDAG</span>}
-                                </h2>
+                                <div>
+                                    <h2 className={`text-sm font-bold uppercase tracking-widest ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                                        {format(day, "eeee d. MMMM", { locale: nb })}
+                                        {isToday && <span className="ml-2 text-[10px] bg-primary/10 px-2 py-0.5 rounded-full">IDAG</span>}
+                                    </h2>
+                                    {dayReadings.length > 0 && (
+                                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                                            <span>{dayReadings.length} {dayReadings.length === 1 ? "måling" : "målinger"}</span>
+                                            {lastReading && (
+                                                <span className="opacity-70">
+                                                    · siste {format(new Date(lastReading.measuredAt), "HH:mm")}: {lastReading.valueMmolL}
+                                                </span>
+                                            )}
+                                            {hasHighReading && (
+                                                <span className="text-amber-500 font-medium">⚠</span>
+                                            )}
+                                        </p>
+                                    )}
+                                </div>
                                 {dayReadings.length > 0 && (
                                     <button
                                         onClick={() => openAdd(day)}
