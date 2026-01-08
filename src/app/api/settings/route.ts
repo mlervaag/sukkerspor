@@ -17,7 +17,16 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
     try {
         const input = await req.json();
-        const settings = await updateSettings(input);
+
+        // Transform date strings to Date objects for Drizzle
+        // This fixes "e.toISOString is not a function" crash on Vercel
+        const transformedInput = {
+            ...input,
+            dueDate: input.dueDate ? new Date(input.dueDate) : input.dueDate === "" ? null : input.dueDate,
+            diagnosisDate: input.diagnosisDate ? new Date(input.diagnosisDate) : input.diagnosisDate === "" ? null : input.diagnosisDate,
+        };
+
+        const settings = await updateSettings(transformedInput);
         return NextResponse.json(settings, {
             headers: { "Cache-Control": "no-store" },
         });
