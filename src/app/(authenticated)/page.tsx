@@ -17,6 +17,9 @@ import { ReadingModal } from "@/components/log/reading-modal";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { getOverviewQueryRange } from "@/lib/utils/query-params";
 import { LastReadingCard } from "@/components/dashboard/last-reading-card";
+import { WithinTargetCard } from "@/components/dashboard/within-target-card";
+import { HighLowStatsCard } from "@/components/dashboard/high-low-stats-card";
+import { DataQualityCard } from "@/components/dashboard/data-quality-card";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -78,28 +81,42 @@ export default function OverviewPage() {
             ) : (
                 <>
 
+                    {/* Stats Grid Level 1 */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* Target Status Widget (Static Reference) */}
-                        <TargetStatusCard stats={stats} />
-
-                        {/* New Last Reading Widget */}
+                        {/* Last Reading Widget - Primary Status */}
                         <LastReadingCard lastReading={readings && readings.length > 0 ? readings[readings.length - 1] : null} />
+
+                        {/* High/Low Stats - Compact Context */}
+                        <HighLowStatsCard
+                            fasting7d={stats.highLow.fasting7d}
+                            postMeal7d={stats.highLow.postMeal7d}
+                        />
                     </div>
 
-                    {/* Over-Target Count Widget */}
-                    {/* Over-Target Count Widget */}
+                    {/* Over-Target Count Widget (Secondary) */}
                     <OverTargetCountCard
                         count7d={stats.overTargetCount7d}
                         count14d={stats.overTargetCount14d}
-                        breakdown7d={{
+                        breakdown7d={stats.withinTarget.fasting7d && stats.withinTarget.postMeal7d ? {
                             fasting: readings7d.filter(r => r.isFasting && parseFloat(r.valueMmolL) > 5.3).length,
                             postMeal: readings7d.filter(r => r.isPostMeal && parseFloat(r.valueMmolL) > 6.7).length
-                        }}
+                        } : undefined}
                         breakdown14d={{
                             fasting: readings?.filter(r => r.isFasting && parseFloat(r.valueMmolL) > 5.3).length ?? 0,
                             postMeal: readings?.filter(r => r.isPostMeal && parseFloat(r.valueMmolL) > 6.7).length ?? 0
                         }}
                     />
+
+                    {/* Within Target Rate (Primary Insight) */}
+                    <WithinTargetCard
+                        fasting7d={stats.withinTarget.fasting7d}
+                        postMeal7d={stats.withinTarget.postMeal7d}
+                        fasting14d={stats.withinTarget.fasting14d}
+                        postMeal14d={stats.withinTarget.postMeal14d}
+                    />
+
+                    {/* Data Quality Indicator (Conditional) */}
+                    <DataQualityCard missingTypeCount={stats.qualityMissingTypeCount} />
 
                     {/* Quick Actions */}
                     <QuickActionsCard

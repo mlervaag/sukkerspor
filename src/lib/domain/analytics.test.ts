@@ -78,6 +78,36 @@ describe("analytics", () => {
             expect(stats.overTargetCount14d).toBe(0);
             expect(stats.coverageFasting).toBe(0);
         });
+
+        it("computes within target stats correctly", () => {
+            const stats = computeDashboardStats(mockReadings, mockReadings);
+            // Fasting: readings are 5.5 and 5.0. 
+            // 5.5 > 5.3 (over), 5.0 <= 5.3 (within)
+            // Within: 1, Total: 2
+            expect(stats.withinTarget.fasting7d).toEqual({ within: 1, total: 2 });
+            expect(stats.withinTarget.fasting14d).toEqual({ within: 1, total: 2 });
+
+            // PostMeal: readings are 7.0 (over) and 6.5 (within)
+            expect(stats.withinTarget.postMeal7d).toEqual({ within: 1, total: 2 });
+        });
+
+        it("computes high/low stats correctly", () => {
+            const stats = computeDashboardStats(mockReadings, mockReadings);
+            // Fasting: 5.5, 5.0 -> High: 5.5, Low: 5.0
+            expect(stats.highLow.fasting7d).toEqual({ high: 5.5, low: 5.0 });
+
+            // PostMeal: 7.0, 6.5 -> High: 7.0, Low: 6.5
+            expect(stats.highLow.postMeal7d).toEqual({ high: 7.0, low: 6.5 });
+        });
+
+        it("computes data quality gaps", () => {
+            const badReadings: GlucoseReading[] = [
+                ...mockReadings,
+                { ...mockReadings[0], id: "x", isFasting: false, isPostMeal: false, measuredAt: new Date() }
+            ];
+            const stats = computeDashboardStats(badReadings, badReadings);
+            expect(stats.qualityMissingTypeCount).toBe(1);
+        });
     });
 
     describe("computeMealBreakdown", () => {

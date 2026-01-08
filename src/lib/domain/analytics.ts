@@ -11,8 +11,21 @@ export interface DashboardStats {
     // Iteration 1 additions
     overTargetCount7d: number;
     overTargetCount14d: number;
+
     coverageFasting: number; // days 0-7
     coveragePostMeal: number; // days 0-7
+    // Iteration 2 additions
+    qualityMissingTypeCount: number;
+    withinTarget: {
+        fasting7d: { within: number; total: number } | null;
+        postMeal7d: { within: number; total: number } | null;
+        fasting14d: { within: number; total: number } | null;
+        postMeal14d: { within: number; total: number } | null;
+    };
+    highLow: {
+        fasting7d: { high: number; low: number } | null;
+        postMeal7d: { high: number; low: number } | null;
+    };
 }
 
 export const THRESHOLDS = {
@@ -82,6 +95,38 @@ export function computeDashboardStats(
         readings7d.filter(r => r.isPostMeal).map(r => r.dayKey)
     ).size;
 
+    // Quality stats (Iteration 2)
+    const qualityMissingTypeCount = readings.filter(r => !r.isFasting && !r.isPostMeal).length;
+
+    // Within Target (Iteration 2)
+    const computeWithin = (rs: GlucoseReading[], type: 'fasting' | 'postMeal') => {
+        const filtered = rs.filter(r => type === 'fasting' ? r.isFasting : r.isPostMeal);
+        if (filtered.length === 0) return null;
+        const limit = type === 'fasting' ? THRESHOLDS.FASTING : THRESHOLDS.POST_MEAL;
+        const within = filtered.filter(r => parseFloat(r.valueMmolL) <= limit).length;
+        return { within, total: filtered.length };
+    };
+
+    const withinTarget = {
+        fasting7d: computeWithin(readings7d, 'fasting'),
+        postMeal7d: computeWithin(readings7d, 'postMeal'),
+        fasting14d: computeWithin(readings, 'fasting'),
+        postMeal14d: computeWithin(readings, 'postMeal'),
+    };
+
+    // High/Low Stats (Iteration 2)
+    const computeHighLow = (rs: GlucoseReading[], type: 'fasting' | 'postMeal') => {
+        const filtered = rs.filter(r => type === 'fasting' ? r.isFasting : r.isPostMeal);
+        if (filtered.length === 0) return null;
+        const values = filtered.map(r => parseFloat(r.valueMmolL));
+        return { high: Math.max(...values), low: Math.min(...values) };
+    };
+
+    const highLow = {
+        fasting7d: computeHighLow(readings7d, 'fasting'),
+        postMeal7d: computeHighLow(readings7d, 'postMeal'),
+    };
+
     return {
         lastLoggedAt: lastLogged,
         hasLoggedToday,
@@ -93,6 +138,9 @@ export function computeDashboardStats(
         overTargetCount14d,
         coverageFasting: fastingDays,
         coveragePostMeal: postMealDays,
+        qualityMissingTypeCount,
+        withinTarget,
+        highLow,
     };
 }
 
