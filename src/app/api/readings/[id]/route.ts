@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { logEvent } from "@/lib/domain/event-log";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs"; // Required for transaction support
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -57,11 +58,13 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
-        // Delete reading and log (sequential, no transaction - Neon HTTP doesn't support it)
-        await db.delete(glucoseReadings).where(eq(glucoseReadings.id, id));
-        await logEvent("delete", "glucose_reading", id, {
-            measuredAt: reading.measuredAt,
-            value: reading.valueMmolL
+        // Transactional delete + log for atomicity
+        await db.transaction(async (tx) => {
+            await tx.delete(glucoseReadings).where(eq(glucoseReadings.id, id));
+            await logEvent("delete", "glucose_reading", id, {
+                measuredAt: reading.measuredAt,
+                value: reading.valueMmolL
+            });
         });
 
         return NextResponse.json({ success: true }, {

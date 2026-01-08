@@ -7,61 +7,59 @@ import { eq } from "drizzle-orm";
 
 /**
  * Destructive import: Deletes all existing readings and replaces them with backup data.
- * Performed within a single transaction.
+ * Performed within a single transaction for atomicity.
  */
 export async function importBackup(data: BackupData): Promise<void> {
-    // Note: Neon HTTP driver does not support transactions.
-    // Operations are executed sequentially. If insert fails after delete,
-    // the user will get an error and can retry.
+    await db.transaction(async (tx) => {
+        // Clear existing readings
+        await tx.delete(glucoseReadings);
 
-    // Clear existing readings
-    await db.delete(glucoseReadings);
+        // Insert readings from backup
+        if (data.readings.length > 0) {
+            // Map backup readings back to DB schema format
+            const valuesToInsert = data.readings.map((r: any) => ({
+                id: r.id,
+                measuredAt: new Date(r.measuredAt || r.measured_at),
+                dayKey: r.dayKey || r.day_key,
+                valueMmolL: r.valueMmolL || r.value_mmol_l,
+                isFasting: r.isFasting ?? r.is_fasting,
+                isPostMeal: r.isPostMeal ?? r.is_post_meal,
+                mealType: r.mealType || r.meal_type,
+                foodText: r.foodText || r.food_text,
+                feelingNotes: r.feelingNotes || r.feeling_notes,
+                createdAt: r.createdAt ? new Date(r.createdAt) : (r.created_at ? new Date(r.created_at) : undefined),
+                updatedAt: r.updatedAt ? new Date(r.updatedAt) : (r.updated_at ? new Date(r.updated_at) : undefined),
+            }));
 
-    // Insert readings from backup
-    if (data.readings.length > 0) {
-        // Map backup readings back to DB schema format
-        const valuesToInsert = data.readings.map((r: any) => ({
-            id: r.id,
-            measuredAt: new Date(r.measuredAt || r.measured_at),
-            dayKey: r.dayKey || r.day_key,
-            valueMmolL: r.valueMmolL || r.value_mmol_l,
-            isFasting: r.isFasting ?? r.is_fasting,
-            isPostMeal: r.isPostMeal ?? r.is_post_meal,
-            mealType: r.mealType || r.meal_type,
-            foodText: r.foodText || r.food_text,
-            feelingNotes: r.feelingNotes || r.feeling_notes,
-            createdAt: r.createdAt ? new Date(r.createdAt) : (r.created_at ? new Date(r.created_at) : undefined),
-            updatedAt: r.updatedAt ? new Date(r.updatedAt) : (r.updated_at ? new Date(r.updated_at) : undefined),
-        }));
+            await tx.insert(glucoseReadings).values(valuesToInsert as any);
+        }
 
-        await db.insert(glucoseReadings).values(valuesToInsert as any);
-    }
-
-    // Restore settings if present (use upsert in case singleton doesn't exist)
-    if (data.settings) {
-        await db.insert(userSettings)
-            .values({
-                id: "singleton",
-                reportLanguage: data.settings.report_language || "no",
-                dueDate: data.settings.due_date ? new Date(data.settings.due_date) : null,
-                diagnosisDate: data.settings.diagnosis_date ? new Date(data.settings.diagnosis_date) : null,
-                notes: data.settings.notes || null,
-                updatedAt: new Date(),
-            })
-            .onConflictDoUpdate({
-                target: userSettings.id,
-                set: {
+        // Restore settings if present (use upsert in case singleton doesn't exist)
+        if (data.settings) {
+            await tx.insert(userSettings)
+                .values({
+                    id: "singleton",
                     reportLanguage: data.settings.report_language || "no",
                     dueDate: data.settings.due_date ? new Date(data.settings.due_date) : null,
                     diagnosisDate: data.settings.diagnosis_date ? new Date(data.settings.diagnosis_date) : null,
                     notes: data.settings.notes || null,
                     updatedAt: new Date(),
-                },
-            });
-    }
+                })
+                .onConflictDoUpdate({
+                    target: userSettings.id,
+                    set: {
+                        reportLanguage: data.settings.report_language || "no",
+                        dueDate: data.settings.due_date ? new Date(data.settings.due_date) : null,
+                        diagnosisDate: data.settings.diagnosis_date ? new Date(data.settings.diagnosis_date) : null,
+                        notes: data.settings.notes || null,
+                        updatedAt: new Date(),
+                    },
+                });
+        }
 
-    await logEvent("import", "backup", undefined, {
-        count: data.readings.length,
-        version: data.schema_version,
+        await logEvent("import", "backup", undefined, {
+            count: data.readings.length,
+            version: data.schema_version,
+        });
     });
 }

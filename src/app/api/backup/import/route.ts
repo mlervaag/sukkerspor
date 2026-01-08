@@ -3,6 +3,7 @@ import { validateBackup } from "@/lib/backup/validate";
 import { importBackup } from "@/lib/backup/import";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs"; // Required for transaction support
 
 export async function POST(req: NextRequest) {
     try {
