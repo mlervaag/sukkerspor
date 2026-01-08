@@ -6,10 +6,13 @@ import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(req: NextRequest, context: RouteContext) {
+    const { id } = await context.params;
     try {
         const reading = await db.query.glucoseReadings.findFirst({
-            where: eq(glucoseReadings.id, params.id),
+            where: eq(glucoseReadings.id, id),
         });
 
         if (!reading) {
@@ -26,10 +29,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: RouteContext) {
+    const { id } = await context.params;
     try {
         const input = await req.json();
-        const reading = await updateReading(params.id, input);
+        const reading = await updateReading(id, input);
 
         return NextResponse.json(reading, {
             headers: {
@@ -40,3 +44,4 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         return NextResponse.json({ error: "Failed to update reading" }, { status: 400 });
     }
 }
+
