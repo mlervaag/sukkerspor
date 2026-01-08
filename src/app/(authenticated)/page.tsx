@@ -101,11 +101,39 @@ export default function OverviewPage() {
                 </div>
             ) : (
                 <>
-                    {/* Primary Stats Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* Last Reading - Always Relevant */}
+                    {/* Top Section: Status & Actions */}
+                    <div className="space-y-4">
+                        {/* 1. Last Reading (Primary Context) */}
                         <LastReadingCard lastReading={readings && readings.length > 0 ? readings[readings.length - 1] : null} />
 
+                        {/* 2. Quick Actions (Directly below Last Reading) */}
+                        <QuickActionsCard
+                            onAddReading={() => setIsModalOpen(true)}
+                            onGenerateReport={() => router.push("/settings")}
+                        />
+
+                        {/* 3. Success/Prompt State (Feedback on action) */}
+                        {!stats.hasLoggedToday ? (
+                            <div className="card bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 flex items-start gap-3">
+                                <AlertCircle className="text-amber-600 mt-1 shrink-0" size={20} />
+                                <div>
+                                    <p className="font-semibold text-amber-900 dark:text-amber-100">Ingen målinger i dag</p>
+                                    <p className="text-sm text-amber-800 dark:text-amber-200">Du har ikke logget noen verdier for i dag ennå. Trykk på &quot;Ny måling&quot; for å starte.</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="card relative overflow-hidden flex items-center gap-3 px-4 py-3 border-l-4 border-l-green-500">
+                                <CheckCircle2 className="text-green-500 shrink-0" size={18} />
+                                <div>
+                                    <p className="text-sm font-semibold text-foreground">Godt jobbet!</p>
+                                    <p className="text-xs text-muted-foreground">Logget i dag. Siste: {stats.lastLoggedAt ? format(stats.lastLoggedAt, "HH:mm") : ""}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Analytics Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Målstatus - Reactive to Window */}
                         <GoalStatusCard
                             windowLabel={windowDays === 7 ? "7 dager" : "14 dager"}
@@ -118,10 +146,7 @@ export default function OverviewPage() {
                                 : (stats.withinTarget.postMeal14d ? { ...stats.withinTarget.postMeal14d, over: stats.overTargetBreakdown.postMeal14d } : null)
                             }
                         />
-                    </div>
 
-                    {/* Secondary Metrics Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* High/Low - Kept as 7d for recent extremes context */}
                         <HighLowStatsCard
                             fasting7d={stats.highLow.fasting7d}
@@ -133,50 +158,21 @@ export default function OverviewPage() {
                             fastingDays={stats.coverageFasting}
                             postMealDays={stats.coveragePostMeal}
                         />
-                    </div>
 
-                    {/* Quality Warning if needed */}
-                    <DataQualityCard missingTypeCount={stats.qualityMissingTypeCount} />
-
-                    {/* Quick Actions */}
-                    <QuickActionsCard
-                        onAddReading={() => setIsModalOpen(true)}
-                        onGenerateReport={() => router.push("/settings")}
-                    />
-
-                    {/* Trend Grid */}
-                    <div className="grid grid-cols-1">
+                        {/* Trend Grid */}
                         <TrendSparklineCard
                             data={trendStats.data}
                             label={trendStats.label}
                         />
                     </div>
 
-                    {/* Meal Breakdown Widget */}
+                    {/* Meal Breakdown Widget (Full Width) */}
                     <MealBreakdownCard meals={mealStats} />
 
+                    {/* Quality Warning (Conditional, low priority) */}
+                    <DataQualityCard missingTypeCount={stats.qualityMissingTypeCount} />
 
-
-                    {/* Prompt/Alert - Success State */}
-                    {!stats.hasLoggedToday ? (
-                        <div className="card bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 flex items-start gap-3">
-                            <AlertCircle className="text-amber-600 mt-1 shrink-0" size={20} />
-                            <div>
-                                <p className="font-semibold text-amber-900 dark:text-amber-100">Ingen målinger i dag</p>
-                                <p className="text-sm text-amber-800 dark:text-amber-200">Du har ikke logget noen verdier for i dag ennå. Trykk på &quot;Ny måling&quot; for å starte.</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="card relative overflow-hidden flex items-center gap-3 px-4 py-3 border-l-4 border-l-green-500">
-                            <CheckCircle2 className="text-green-500 shrink-0" size={18} />
-                            <div>
-                                <p className="text-sm font-semibold text-foreground">Godt jobbet!</p>
-                                <p className="text-xs text-muted-foreground">Logget i dag. Siste: {stats.lastLoggedAt ? format(stats.lastLoggedAt, "HH:mm") : ""}</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Last 3 Readings */}
+                    {/* Last 3 Readings List */}
                     <div className="card space-y-4">
                         <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Siste 3 målinger</h3>
                         <div className="space-y-3">
