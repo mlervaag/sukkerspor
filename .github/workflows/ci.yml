@@ -25,3 +25,4 @@ jobs:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
         APP_COOKIE_SECRET: ${{ secrets.APP_COOKIE_SECRET }}
+        NEXT_TELEMETRY_DISABLED: 1

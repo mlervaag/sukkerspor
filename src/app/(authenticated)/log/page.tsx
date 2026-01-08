@@ -21,7 +21,8 @@ export default function LogPage() {
 
     const { data: readings, mutate } = useSWR<GlucoseReading[]>(
         `/api/readings?date=${start.toISOString()}`,
-        fetcher
+        fetcher,
+        { revalidateOnFocus: true }
     );
 
     const daysInWeek = eachDayOfInterval({ start, end });

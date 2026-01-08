@@ -15,7 +15,8 @@ export default function OverviewPage() {
 
     const { data: readings } = useSWR<GlucoseReading[]>(
         `/api/readings?date=${start.toISOString()}`,
-        fetcher
+        fetcher,
+        { revalidateOnFocus: true }
     );
 
     const stats = readings ? computeDashboardStats(readings) : null;
@@ -99,7 +100,7 @@ export default function OverviewPage() {
                                     <div className="flex items-center gap-2">
                                         <span className="text-lg font-bold">{r.valueMmolL}</span>
                                         <div className={`w-2 h-2 rounded-full ${(r.isFasting && parseFloat(r.valueMmolL) > 5.3) || (r.isPostMeal && parseFloat(r.valueMmolL) > 6.7)
-                                                ? "bg-red-500" : "bg-green-500"
+                                            ? "bg-red-500" : "bg-green-500"
                                             }`} />
                                     </div>
                                 </div>
