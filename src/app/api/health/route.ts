@@ -12,6 +12,8 @@ export async function GET() {
         return NextResponse.json({
             status: "healthy",
             timestamp: new Date().toISOString(),
+        }, {
+            headers: { "Cache-Control": "no-store" },
         });
     } catch (error) {
         console.error("Health check failed:", error);

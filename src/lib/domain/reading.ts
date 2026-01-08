@@ -7,12 +7,15 @@ import { logEvent } from "./event-log";
 import { startOfWeek, endOfWeek } from "date-fns";
 
 export async function createReading(input: ReadingInput): Promise<GlucoseReading> {
-    const dayKey = computeDayKey(new Date(input.measuredAt));
+    // Convert string measuredAt to Date for Drizzle timestamp column
+    const measuredAt = new Date(input.measuredAt);
+    const dayKey = computeDayKey(measuredAt);
 
     const [reading] = await db
         .insert(glucoseReadings)
         .values({
             ...input,
+            measuredAt, // Use Date object, not the raw string
             dayKey,
         })
         .returning();
@@ -26,7 +29,10 @@ export async function updateReading(id: string, input: Partial<ReadingInput>): P
     const updateData: any = { ...input, updatedAt: new Date() };
 
     if (input.measuredAt) {
-        updateData.dayKey = computeDayKey(new Date(input.measuredAt));
+        // Convert string measuredAt to Date for Drizzle timestamp column
+        const measuredAt = new Date(input.measuredAt);
+        updateData.measuredAt = measuredAt;
+        updateData.dayKey = computeDayKey(measuredAt);
     }
 
     const [reading] = await db
