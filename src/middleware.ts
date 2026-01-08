@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isValidSession } from "@/lib/auth/middleware";
 
-const EXEMPT_PATHS = ["/login", "/api/health", "/favicon.ico"];
+const EXEMPT_PATHS = ["/login", "/api/auth/login", "/api/health", "/favicon.ico"];
 
 export function middleware(req: NextRequest) {
     const { pathname } = req.nextUrl;

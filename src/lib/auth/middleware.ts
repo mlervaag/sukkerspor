@@ -2,8 +2,11 @@ import { NextRequest } from "next/server";
 import crypto from "crypto";
 
 export function getExpectedHash() {
-    const password = process.env.APP_PASSWORD || "devpassword";
-    const secret = process.env.APP_COOKIE_SECRET || "devsecret";
+    const password = process.env.APP_PASSWORD;
+    const secret = process.env.APP_COOKIE_SECRET;
+    if (!password || !secret) {
+        throw new Error("Missing required auth environment variables");
+    }
     return crypto.createHmac("sha256", secret).update(password).digest("hex");
 }
 

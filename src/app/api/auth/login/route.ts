@@ -5,7 +5,15 @@ import { getExpectedHash } from "@/lib/auth/middleware";
 export async function POST(req: NextRequest) {
     try {
         const { password } = await req.json();
-        const expectedPassword = process.env.APP_PASSWORD || "devpassword";
+        const expectedPassword = process.env.APP_PASSWORD;
+
+        if (!expectedPassword) {
+            console.error("APP_PASSWORD env var is not set");
+            return NextResponse.json(
+                { error: "Server configuration error" },
+                { status: 500 }
+            );
+        }
 
         if (password === expectedPassword) {
             const token = getExpectedHash();
