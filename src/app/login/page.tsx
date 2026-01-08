@@ -22,7 +22,7 @@ export default function LoginPage() {
             });
 
             if (res.ok) {
-                router.push("/log");
+                router.push("/");
                 router.refresh();
             } else {
                 setError("Feil passord. Vennligst prøv igjen.");

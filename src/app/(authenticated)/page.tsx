@@ -85,6 +85,12 @@ export default function OverviewPage() {
                         count14d={stats.overTargetCount14d}
                     />
 
+                    {/* Quick Actions */}
+                    <QuickActionsCard
+                        onAddReading={() => setIsModalOpen(true)}
+                        onGenerateReport={() => router.push("/settings")}
+                    />
+
                     {/* Coverage and Trend Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <CoverageCard
@@ -100,11 +106,7 @@ export default function OverviewPage() {
                     {/* Meal Breakdown Widget */}
                     <MealBreakdownCard meals={mealStats} />
 
-                    {/* Quick Actions */}
-                    <QuickActionsCard
-                        onAddReading={() => setIsModalOpen(true)}
-                        onGenerateReport={() => router.push("/settings")}
-                    />
+
 
                     {/* Prompt/Alert */}
                     {!stats.hasLoggedToday ? (
