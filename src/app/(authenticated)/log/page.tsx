@@ -20,8 +20,11 @@ export default function LogPage() {
     const start = startOfWeek(currentWeek, { weekStartsOn: 1 });
     const end = endOfWeek(currentWeek, { weekStartsOn: 1 });
 
+    // Use YYYY-MM-DD format for weekStartDayKey (Monday of the week)
+    const weekStartDayKey = format(start, "yyyy-MM-dd");
+
     const { data: readings, mutate } = useSWR<GlucoseReading[]>(
-        `/api/readings?date=${start.toISOString()}`,
+        `/api/readings?weekStartDayKey=${weekStartDayKey}`,
         fetcher,
         { revalidateOnFocus: true }
     );

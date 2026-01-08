@@ -70,3 +70,11 @@ export async function listReadingsByWeek(date: Date): Promise<GlucoseReading[]> 
         .where(between(glucoseReadings.dayKey, startDayKey, endDayKey))
         .orderBy(glucoseReadings.measuredAt);
 }
+
+export async function listReadingsByDayKeyRange(startDayKey: string, endDayKey: string): Promise<GlucoseReading[]> {
+    return db
+        .select()
+        .from(glucoseReadings)
+        .where(between(glucoseReadings.dayKey, startDayKey, endDayKey))
+        .orderBy(glucoseReadings.measuredAt);
+}

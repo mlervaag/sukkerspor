@@ -44,12 +44,9 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     }
 }
 
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest, context: RouteContext) {
     try {
-        const { id } = await params;
+        const { id } = await context.params;
 
         // Fetch for logging before deletion
         const reading = await db.query.glucoseReadings.findFirst({
@@ -60,13 +57,11 @@ export async function DELETE(
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
-        // Transactional delete + log for atomicity
-        await db.transaction(async (tx) => {
-            await tx.delete(glucoseReadings).where(eq(glucoseReadings.id, id));
-            await logEvent("delete", "glucose_reading", id, {
-                measuredAt: reading.measuredAt,
-                value: reading.valueMmolL
-            });
+        // Delete reading and log (sequential, no transaction - Neon HTTP doesn't support it)
+        await db.delete(glucoseReadings).where(eq(glucoseReadings.id, id));
+        await logEvent("delete", "glucose_reading", id, {
+            measuredAt: reading.measuredAt,
+            value: reading.valueMmolL
         });
 
         return NextResponse.json({ success: true }, {
