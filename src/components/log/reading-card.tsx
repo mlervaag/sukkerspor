@@ -3,6 +3,7 @@
 import { GlucoseReading } from "@/lib/domain/types";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
+import { THRESHOLDS } from "@/lib/domain/analytics";
 
 interface ReadingCardProps {
     reading: GlucoseReading;
@@ -12,10 +13,15 @@ interface ReadingCardProps {
 export function ReadingCard({ reading, onClick }: ReadingCardProps) {
     const time = format(new Date(reading.measuredAt), "HH:mm");
 
+    const val = parseFloat(reading.valueMmolL);
+    const isOverTarget = (reading.isFasting && val > THRESHOLDS.FASTING) ||
+        (reading.isPostMeal && val > THRESHOLDS.POST_MEAL);
+
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center justify-between p-4 bg-card rounded-2xl border border-border active:scale-[0.98] transition-all"
+            className={`w-full flex items-center justify-between p-4 bg-card rounded-2xl border border-border active:scale-[0.98] transition-all ${isOverTarget ? "border-l-amber-500 border-l-4" : ""
+                }`}
         >
             <div className="flex flex-col items-start gap-1">
                 <span className="text-sm font-medium text-muted-foreground">{time}</span>
@@ -31,14 +37,14 @@ export function ReadingCard({ reading, onClick }: ReadingCardProps) {
                         </span>
                     )}
                     {reading.isPostMeal && reading.foodText && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={reading.foodText}>
+                        <span className="text-xs text-muted-foreground line-clamp-2 max-w-[180px]">
                             {reading.foodText}
                         </span>
                     )}
                 </div>
             </div>
 
-            <div className="text-2xl font-bold text-primary">
+            <div className="text-2xl font-bold font-mono text-primary">
                 {reading.valueMmolL} <span className="text-sm font-normal text-muted-foreground">mmol/L</span>
             </div>
         </button>

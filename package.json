@@ -7,6 +7,8 @@
     },
     "scripts": {
         "dev": "next dev",
+        "clean": "node -e \"const fs = require('fs'); try { if (fs.existsSync('.next')) fs.rmSync('.next', { recursive: true, force: true }); console.log('.next cleaned'); } catch (e) { console.error('Warning: Could not clean .next:', e.message); }\"",
+        "prebuild": "npm run clean",
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
