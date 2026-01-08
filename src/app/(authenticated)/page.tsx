@@ -87,9 +87,18 @@ export default function OverviewPage() {
                     </div>
 
                     {/* Over-Target Count Widget */}
+                    {/* Over-Target Count Widget */}
                     <OverTargetCountCard
                         count7d={stats.overTargetCount7d}
                         count14d={stats.overTargetCount14d}
+                        breakdown7d={{
+                            fasting: readings7d.filter(r => r.isFasting && parseFloat(r.valueMmolL) > 5.3).length,
+                            postMeal: readings7d.filter(r => r.isPostMeal && parseFloat(r.valueMmolL) > 6.7).length
+                        }}
+                        breakdown14d={{
+                            fasting: readings?.filter(r => r.isFasting && parseFloat(r.valueMmolL) > 5.3).length ?? 0,
+                            postMeal: readings?.filter(r => r.isPostMeal && parseFloat(r.valueMmolL) > 6.7).length ?? 0
+                        }}
                     />
 
                     {/* Quick Actions */}

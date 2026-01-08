@@ -51,16 +51,22 @@ export function LastReadingCard({ lastReading }: LastReadingCardProps) {
                     <span className="text-sm text-foreground">
                         Kl. {format(new Date(lastReading.measuredAt), "HH:mm")}
                     </span>
-                    <span className="text-xs text-muted-foreground mt-1">
-                        {lastReading.isFasting
-                            ? "Fastende"
-                            : lastReading.isPostMeal && lastReading.mealType
-                                ? `Etter ${lastReading.mealType.toLowerCase()}`
-                                : lastReading.isPostMeal
-                                    ? "Etter måltid"
-                                    : "Annet"
-                        }
-                    </span>
+
+                    <div className="mt-1 flex flex-col items-end">
+                        <span className="text-xs font-semibold text-muted-foreground">
+                            {lastReading.isFasting ? "Fastende" : lastReading.isPostMeal ? "Etter måltid" : "Annet"}
+                        </span>
+                        {!lastReading.isFasting && lastReading.isPostMeal && lastReading.mealType && (
+                            <span className="text-xs text-muted-foreground/80">
+                                {lastReading.mealType}
+                            </span>
+                        )}
+                        {lastReading.foodText && (
+                            <span className="text-[10px] text-muted-foreground/60 truncate max-w-[100px]" title={lastReading.foodText}>
+                                {lastReading.foodText}
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

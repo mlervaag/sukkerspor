@@ -12,16 +12,16 @@ export function QuickActionsCard({ onAddReading, onGenerateReport }: QuickAction
         <div className="grid grid-cols-2 gap-4">
             <button
                 onClick={onAddReading}
-                className="btn-primary py-4 flex flex-col items-center justify-center gap-2 rounded-2xl shadow-sm active:scale-[0.98] transition-all"
+                className="btn-primary py-3 flex flex-col items-center justify-center gap-1.5 rounded-xl shadow-sm active:scale-[0.98] transition-all"
             >
-                <Plus size={24} />
+                <Plus size={22} />
                 <span className="text-sm font-semibold">Ny måling</span>
             </button>
             <button
                 onClick={onGenerateReport}
-                className="bg-card border border-border py-4 flex flex-col items-center justify-center gap-2 rounded-2xl text-primary shadow-sm active:scale-[0.98] transition-all"
+                className="bg-card border border-border py-3 flex flex-col items-center justify-center gap-1.5 rounded-xl text-primary shadow-sm hover:bg-muted/50 active:scale-[0.98] transition-all"
             >
-                <FileText size={24} />
+                <FileText size={22} />
                 <span className="text-sm font-semibold">Generer rapport</span>
             </button>
         </div>
