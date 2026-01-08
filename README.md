@@ -1,223 +1,138 @@
 # Sukkerspor
 
-A mobile-first blood glucose logging app built with Next.js, Tailwind CSS, and Drizzle ORM on Neon Postgres.
+A mobile-first blood glucose logging app for gestational diabetes, built with Next.js, Tailwind CSS, and Drizzle ORM on Neon Postgres.
 
 ## Features
 
-### Core
-- 📊 **Dashboard** — Weekly stats, compliance tracking, and trend overview
-- 📝 **Logging** — Add and edit glucose readings with meal context and food notes
-- 🔒 **Password Auth** — Simple password-based authentication with secure cookies
-- 📱 **Mobile-First** — Scandinavian-inspired design optimized for phones
+### 📊 Dashboard (Overview v1.1)
+- **Target Status Summary** — Instant view of fasting and post-meal averages compared to clinical reference values.
+- **Over-Target Tracking** — 7-day and 14-day counts of readings above reference, with clinical threshold alerts.
+- **Coverage Metrics** — Visual tracking of logging frequency for fasting and post-meal readings.
+- **Meal Breakdown** — Detailed analytics per meal type (breakfast, lunch, etc.) with over-target proportions.
+- **Trend Sparkline** — 7-day smoothed trend visualization (Stabil, Økende, Synkende).
+- **Quick Actions** — Fast entry modal and report generation access.
 
-### Data Management
-- 💾 **Export/Import** — JSON backup with schema versioning (v1)
-- 🗑️ **Deletion Flows** — Delete single readings, by day, by week, or all data with confirmation
-- 📄 **PDF Reports** — Generate weekly/monthly reports in Norwegian or English
+### 📝 Logging & Management
+- **Smart Logging** — Categorized readings (Fasting vs. Post-Meal) with meal type and food notes.
+- **Log Indicators** — Visual amber-border markers for readings exceeding target thresholds.
+- **Data Mobility** — JSON Export/Import with schema versioning for backups and migration.
+- **Detailed Reports** — Generate PDF summaries in Norwegian or English for medical consultation.
+- **Privacy First** — All data is private to the user, with localized storage logic.
+
+### 🔒 Security & Safety
+- **Clinical Integrity** — Neutral neutral wording; targets presented as "Referanseverdier" based on Helsenorge/Diabetesforbundet.
+- **Authentication** — Password-protected access with Edge-compatible HMAC session tokens.
+- **Secure Cookies** — HttpOnly, Secure (Production), and SameSite=Lax cookie policies.
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| Framework | Next.js 14 (App Router) |
-| Styling | Tailwind CSS |
-| Database | Neon Postgres + Drizzle ORM (neon-serverless) |
-| Auth | HMAC-signed session cookies |
-| PDF Generation | pdf-lib |
-| Hosting | Vercel |
+| **Framework** | Next.js 14 (App Router) |
+| **Styling** | Vanilla CSS + Tailwind |
+| **Database** | Neon Postgres + Drizzle ORM |
+| **Auth** | HMAC-signed session cookies |
+| **Testing** | Vitest + Custom Smoke Tests |
+| **PDF** | pdf-lib |
+
+---
 
 ## Project Structure
 
 ```
 src/
 ├── app/
-│   ├── (authenticated)/        # Protected routes
-│   │   ├── page.tsx            # Dashboard (Oversikt)
-│   │   ├── log/                # Weekly log view
-│   │   └── settings/           # Settings page
-│   ├── api/
-│   │   ├── auth/login/         # Login endpoint
-│   │   ├── readings/           # CRUD for glucose readings
-│   │   ├── readings/[id]/      # Single reading operations
-│   │   ├── readings/bulk/      # Bulk delete (day/week/all)
-│   │   ├── backup/export/      # JSON export
-│   │   ├── backup/import/      # JSON import
-│   │   ├── report/pdf/         # PDF report generation
-│   │   └── health/             # Health check
-│   └── login/                  # Login page
+│   ├── (authenticated)/    # Dashboard, Log, Settings (Protected)
+│   ├── api/                # Readings, Backup, Report, Health API
+│   └── login/              # Public login entry
 ├── components/
-│   ├── log/                    # Log-related components
-│   ├── settings/               # Settings components (export, import, delete flows)
-│   ├── report/                 # Report generation UI
-│   └── ui/                     # Shared UI components (Modal, ConfirmDialog)
+│   ├── dashboard/          # Specialized v1.1 stat widgets
+│   ├── log/                # Reading cards, Entry modals
+│   └── report/             # PDF generation triggers
 ├── lib/
-│   ├── auth/                   # Authentication utilities
-│   ├── backup/                 # Export/import logic
-│   ├── db/                     # Drizzle schema and connection
-│   ├── domain/                 # Business logic and types
-│   ├── report/                 # PDF generation and translations
-│   └── utils/                  # Utility functions
-└── middleware.ts               # Auth middleware
+│   ├── auth/               # Edge-compatible crypto sessions
+│   ├── db/                 # Drizzle schema & Postgres pool
+│   ├── domain/             # Analytics engine & clinical logic
+│   └── report/             # PDF templates & translations
+└── middleware.ts           # Global auth guarding
 ```
+
+---
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js 20+
-- npm
-- A Neon Postgres database
-
 ### Setup
 
-1. Clone the repo and install dependencies:
+1. **Clone & Install**:
    ```bash
    npm install
    ```
 
-2. Copy `.env.local.example` to `.env.local` and fill in:
+2. **Environment Configuration**:
+   Copy `.env.local.example` to `.env.local` and configure your credentials:
    ```env
-   DATABASE_URL="your-neon-connection-string"
-   APP_PASSWORD="your-login-password"
-   APP_COOKIE_SECRET="at-least-32-random-characters"
+   DATABASE_URL="postgres://..."
+   APP_PASSWORD="your-secure-password"
+   APP_COOKIE_SECRET="32-char-random-string"
    ```
 
-3. Push the database schema:
+3. **Database Migration**:
    ```bash
    npx drizzle-kit push:pg
    ```
 
-4. Run the dev server:
+4. **Run Development Server**:
    ```bash
    npm run dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000)
+### High-Reliability Build (Windows)
+If you encounter `readlink EINVAL` errors during build, use the integrated clean script:
+```bash
+npm run clean && npm run build
+```
 
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Run TypeScript checks |
-| `npm test` | Run unit tests |
-| `node scripts/smoke.mjs --password=...` | Run end-to-end smoke tests |
+---
 
 ## API Reference
 
-### Readings
+### Glucose Readings
+- `GET /api/readings` — List readings (supports `weekStartDayKey` or 14d lookback).
+- `POST /api/readings` — Create new log entry.
+- `GET /api/readings/[id]` — Fetch single entry.
+- `PUT /api/readings/[id]` — Update entry.
+- `DELETE /api/readings/bulk` — Delete by `dayKey`, `week`, or recursive `all=true`.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/readings?weekStartDayKey={YYYY-MM-DD}` | List readings for the week starting on Monday |
-| GET | `/api/readings?date={iso}` | (Legacy) List readings for week, date normalized to Oslo |
-| POST | `/api/readings` | Create a new reading |
-| GET | `/api/readings/[id]` | Get a single reading |
-| PUT | `/api/readings/[id]` | Update a reading |
-| DELETE | `/api/readings/[id]` | Delete a reading (transactional) |
-| DELETE | `/api/readings/bulk?dayKey={YYYY-MM-DD}` | Delete all readings for a day |
-| DELETE | `/api/readings/bulk?week={YYYY-MM-DD}` | Delete all readings for a week |
-| DELETE | `/api/readings/bulk?all=true` | Delete all readings |
+### System & Reports
+- `GET /api/report/pdf` — Generates clinical PDF (Range: `week`, `month`, `all`).
+- `GET /api/settings` — Fetch user preferences (singleton).
+- `GET /api/backup/export` — JSON Data dump.
+- `GET /api/health` — DB connectivity check.
 
-### Backup
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/backup/export` | Download JSON backup |
-| POST | `/api/backup/import` | Import JSON backup (destructive) |
-
-### Reports
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/report/pdf?range={week\|month\|all}&lang={no\|en}` | Generate PDF report |
-
-### Auth
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login` | Login with password |
+---
 
 ## Database Schema
 
 ### `glucose_readings`
+Core clinical data storage.
+- `measured_at`: UTC Timestamp.
+- `day_key`: Derived YYYY-MM-DD (Europe/Oslo).
+- `value_mmol_l`: Numeric (4,1).
+- `is_fasting` / `is_post_meal`: Binary classification.
+- `meal_type`: Categorical (frokost, lunsj, etc.).
+- `food_text`: Text-based food logs.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key |
-| `measured_at` | Timestamp | When the reading was taken |
-| `day_key` | Text | Date in Europe/Oslo (YYYY-MM-DD) |
-| `value_mmol_l` | Numeric(4,1) | Blood glucose value |
-| `is_fasting` | Boolean | Fasting reading flag |
-| `is_post_meal` | Boolean | Post-meal reading flag |
-| `meal_type` | Text | Frokost, Lunsj, Middag, Kvelds, Mellommåltid |
-| `food_text` | Text | What was eaten (optional) |
-| `feeling_notes` | Text | User notes (optional) |
-| `created_at` | Timestamp | Record creation time |
-| `updated_at` | Timestamp | Last update time |
+### `user_settings` (Singleton)
+- `due_date`: Clinical target date.
+- `diagnosis_date`: Reference point for reports.
+- `report_language`: Preferred output (no/en).
 
 ### `event_log`
+Audit trail for significant mutations (create, delete, import).
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key |
-| `event_type` | Text | create, update, delete, import, export |
-| `entity_type` | Text | glucose_reading, backup, settings |
-| `entity_id` | UUID | Related entity ID (optional) |
-| `payload` | Text | JSON metadata |
-| `created_at` | Timestamp | Event timestamp |
-
-## Backup Format
-
-The app exports/imports data in JSON format with schema versioning:
-
-```json
-{
-  "schema_version": 1,
-  "exported_at": "2026-01-08T12:00:00.000Z",
-  "readings": [
-    {
-      "id": "uuid",
-      "measuredAt": "2026-01-08T10:00:00.000Z",
-      "dayKey": "2026-01-08",
-      "valueMmolL": "5.5",
-      "isFasting": true,
-      "isPostMeal": false,
-      "mealType": null,
-      "foodText": null,
-      "feelingNotes": null,
-      "createdAt": "...",
-      "updatedAt": "..."
-    }
-  ],
-  "settings": {}
-}
-```
-
-## Timezone Handling
-
-- All timestamps are stored in UTC
-- `day_key` is computed server-side using **Europe/Oslo** timezone
-- The client sends `measuredAt` as a Date; the server derives `day_key`
-
-## Security
-
-- Password authentication with HMAC-signed session cookies
-- HttpOnly, Secure (in production), SameSite=Lax cookies
-- All API routes (except `/api/auth/login` and `/api/health`) require authentication
-- No secrets exposed in export/import data or API responses
-
-## Deployment
-
-See [docs/deploy-vercel.md](docs/deploy-vercel.md) for Vercel deployment instructions.
-
-Required environment variables on Vercel:
-- `DATABASE_URL`
-- `APP_PASSWORD`
-- `APP_COOKIE_SECRET`
+---
 
 ## License
-
 Private project.
