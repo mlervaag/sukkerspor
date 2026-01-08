@@ -4,6 +4,8 @@ import { DeleteDayFlow } from "@/components/settings/delete-day-flow";
 import { DeleteWeekFlow } from "@/components/settings/delete-week-flow";
 import { DeleteAllFlow } from "@/components/settings/delete-all-flow";
 import { GenerateReportFlow } from "@/components/report/generate-report-flow";
+import { AppearanceCard } from "@/components/settings/appearance-card";
+import { ProfileCard } from "@/components/settings/profile-card";
 
 export default function SettingsPage() {
     return (
@@ -14,6 +16,8 @@ export default function SettingsPage() {
             </header>
 
             <div className="space-y-4">
+                <ProfileCard />
+                <AppearanceCard />
                 <div className="card space-y-4">
                     <h2 className="font-semibold">Rapport</h2>
                     <p className="text-sm text-muted-foreground">

@@ -6,5 +6,8 @@ export interface BackupData {
     readings: GlucoseReading[];
     settings: {
         report_language?: string;
+        due_date?: string;
+        diagnosis_date?: string;
+        notes?: string;
     };
 }

@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
-import { glucoseReadings } from "@/lib/db/schema";
+import { glucoseReadings, userSettings } from "@/lib/db/schema";
 import { BackupData } from "./schema";
 import { logEvent } from "../domain/event-log";
+import { eq } from "drizzle-orm";
+
 
 /**
  * Destructive import: Deletes all existing readings and replaces them with backup data.
@@ -30,6 +32,19 @@ export async function importBackup(data: BackupData): Promise<void> {
             }));
 
             await tx.insert(glucoseReadings).values(valuesToInsert as any);
+        }
+
+        // Restore settings if present
+        if (data.settings) {
+            await tx.update(userSettings)
+                .set({
+                    reportLanguage: data.settings.report_language || "no",
+                    dueDate: data.settings.due_date ? new Date(data.settings.due_date) : null,
+                    diagnosisDate: data.settings.diagnosis_date ? new Date(data.settings.diagnosis_date) : null,
+                    notes: data.settings.notes || null,
+                    updatedAt: new Date(),
+                })
+                .where(eq(userSettings.id, "singleton"));
         }
 
         await logEvent("import", "backup", undefined, {

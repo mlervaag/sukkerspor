@@ -23,3 +23,13 @@ export const eventLog = pgTable("event_log", {
     payload: text("payload"), // minimal safe payload
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const userSettings = pgTable("user_settings", {
+    id: text("id").primaryKey(), // singleton key: 'singleton'
+    dueDate: timestamp("due_date", { withTimezone: true }),
+    diagnosisDate: timestamp("diagnosis_date", { withTimezone: true }),
+    notes: text("notes"),
+    reportLanguage: text("report_language").default("no").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+

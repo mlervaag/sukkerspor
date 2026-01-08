@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getReportData, ReportRange } from "@/lib/report/report-data";
 import { generatePDF } from "@/lib/report/generate-pdf";
 import { Language } from "@/lib/report/translations";
+import { getSettings } from "@/lib/domain/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +10,16 @@ export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
         const range = (searchParams.get("range") || "week") as ReportRange;
-        const langString = searchParams.get("lang") || "no";
-        const lang = (["no", "en"].includes(langString) ? langString : "no") as Language;
+
+        // Get language from query or fetch from settings
+        let langString = searchParams.get("lang");
+        if (!langString) {
+            const settings = await getSettings();
+            langString = settings.reportLanguage;
+        }
+
+        const lang = (["no", "en"].includes(langString || "") ? langString : "no") as Language;
+
 
         if (!["week", "month", "all"].includes(range)) {
             return NextResponse.json({ error: "Invalid range" }, { status: 400 });

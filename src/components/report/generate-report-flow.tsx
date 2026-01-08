@@ -1,16 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileText, Download } from "lucide-react";
+import useSWR from "swr";
+import { UserSettings } from "@/lib/domain/types";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function GenerateReportFlow() {
+    const { data: settings } = useSWR<UserSettings>("/api/settings", fetcher);
     const [range, setRange] = useState("week");
     const [lang, setLang] = useState("no");
     const [loading, setLoading] = useState(false);
 
+    useEffect(() => {
+        if (settings?.reportLanguage) {
+            setLang(settings.reportLanguage);
+        }
+    }, [settings]);
+
+    const handleLangChange = async (newLang: string) => {
+        setLang(newLang);
+        try {
+            await fetch("/api/settings", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reportLanguage: newLang }),
+            });
+        } catch (err) {
+            console.error("Failed to save language preference:", err);
+        }
+    };
+
     const handleGenerate = () => {
         setLoading(true);
         const url = `/api/report/pdf?range=${range}&lang=${lang}`;
+
 
         // Use a hidden anchor to trigger download
         const link = document.createElement("a");
@@ -44,7 +69,7 @@ export function GenerateReportFlow() {
                     <label className="text-sm font-medium">Språk</label>
                     <select
                         value={lang}
-                        onChange={(e) => setLang(e.target.value)}
+                        onChange={(e) => handleLangChange(e.target.value)}
                         className="input w-full"
                     >
                         <option value="no">Norsk</option>
