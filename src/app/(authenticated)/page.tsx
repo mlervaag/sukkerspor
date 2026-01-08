@@ -15,7 +15,7 @@ import { TrendSparklineCard } from "@/components/dashboard/trend-sparkline-card"
 import { QuickActionsCard } from "@/components/dashboard/quick-actions-card";
 import { ReadingModal } from "@/components/log/reading-modal";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { getOverviewQueryDate } from "@/lib/utils/query-params";
+import { getOverviewQueryRange } from "@/lib/utils/query-params";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -24,7 +24,7 @@ export default function OverviewPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Stable anchor for SWR key - computed once on mount
-    const [queryDate] = useState(() => getOverviewQueryDate());
+    const [{ startDayKey, endDayKey }] = useState(() => getOverviewQueryRange());
 
     // We also need start7d for filtering - derive from the same anchor logic
     // start14d is technically the date passed to queryDate (which is subDays 14)
@@ -34,7 +34,7 @@ export default function OverviewPage() {
     const start14d = subDays(today, 14);
 
     const { data: readings, mutate } = useSWR<GlucoseReading[]>(
-        `/api/readings?date=${queryDate}`,
+        `/api/readings?startDayKey=${startDayKey}&endDayKey=${endDayKey}`,
         fetcher,
         { revalidateOnFocus: true }
     );

@@ -11,6 +11,25 @@ export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
 
+        const startDayKeyParam = searchParams.get("startDayKey");
+        const endDayKeyParam = searchParams.get("endDayKey");
+
+        // Primary Fetch Mode: Explicit Range (New)
+        if (startDayKeyParam && endDayKeyParam) {
+            if (!DAY_KEY_REGEX.test(startDayKeyParam) || !DAY_KEY_REGEX.test(endDayKeyParam)) {
+                return NextResponse.json({ error: "Invalid dayKey format" }, { status: 400 });
+            }
+            if (startDayKeyParam > endDayKeyParam) {
+                return NextResponse.json({ error: "startDayKey must be <= endDayKey" }, { status: 400 });
+            }
+
+            const readings = await listReadingsByDayKeyRange(startDayKeyParam, endDayKeyParam);
+            return NextResponse.json(readings, {
+                headers: { "Cache-Control": "private, no-store" },
+            });
+        }
+
+        // Secondary Mode: Week Fetch (Legacy/WeekLog)
         let weekStartDayKey = searchParams.get("weekStartDayKey");
         const dateStr = searchParams.get("date");
 
@@ -22,7 +41,7 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // Backward compatibility: if weekStartDayKey not provided, derive from date
+        // Legacy Fallback: derive from date or defaults
         if (!weekStartDayKey) {
             let date: Date;
             if (dateStr) {
@@ -34,7 +53,7 @@ export async function GET(req: NextRequest) {
                     );
                 }
             } else {
-                date = new Date();
+                date = new Date(); // Default to today if nothing provided
             }
 
             // Convert to Oslo local date and compute the Monday of that week

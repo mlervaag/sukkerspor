@@ -1,11 +1,19 @@
-import { startOfDay, subDays } from "date-fns";
+import { computeDayKey } from "./day-key";
+import { subDays } from "date-fns";
 
 /**
- * Generates a stable ISO string for the Overview query (14 days ago from start of today).
- * This anchors the query to the start of the current day, preventing 
- * milliseconds-level drift that causes fetch loops.
+ * Generates stable startDayKey and endDayKey for the Overview fetching (14 days).
+ * endDayKey = Today (Oslo)
+ * startDayKey = Today - 13 days
  */
-export function getOverviewQueryDate(now: Date = new Date()): string {
-    const today = startOfDay(now);
-    return subDays(today, 14).toISOString();
+export function getOverviewQueryRange(now: Date = new Date()): { startDayKey: string; endDayKey: string } {
+    const endDayKey = computeDayKey(now);
+
+    // We can't just subtract days from the dayKey string.
+    // We should assume 'now' is a Date object, subtract 13 days, then compute that dayKey.
+    // Note: subDays respects local time of the Date object passed to it.
+    const startDate = subDays(now, 13);
+    const startDayKey = computeDayKey(startDate);
+
+    return { startDayKey, endDayKey };
 }
