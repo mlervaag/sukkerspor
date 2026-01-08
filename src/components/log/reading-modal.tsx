@@ -4,17 +4,21 @@ import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/modal";
 import { ReadingInput, GlucoseReading } from "@/lib/domain/types";
 import { format } from "date-fns";
+import { nb } from "date-fns/locale";
+import { DeleteReadingButton } from "./delete-reading-button";
+import { combineDateAndTime } from "@/lib/utils/date-time";
 
 interface ReadingModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: ReadingInput) => Promise<void>;
     initialData?: GlucoseReading | null;
+    selectedDate?: Date | null;
 }
 
-export function ReadingModal({ isOpen, onClose, onSubmit, initialData }: ReadingModalProps) {
+export function ReadingModal({ isOpen, onClose, onSubmit, initialData, selectedDate }: ReadingModalProps) {
     const [value, setValue] = useState("");
-    const [measuredAt, setMeasuredAt] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+    const [time, setTime] = useState(format(new Date(), "HH:mm"));
     const [isFasting, setIsFasting] = useState(false);
     const [isPostMeal, setIsPostMeal] = useState(false);
     const [mealType, setMealType] = useState("");
@@ -22,42 +26,56 @@ export function ReadingModal({ isOpen, onClose, onSubmit, initialData }: Reading
     const [foodText, setFoodText] = useState("");
     const [feelingNotes, setFeelingNotes] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (initialData) {
             setValue(initialData.valueMmolL.toString());
-            setMeasuredAt(format(new Date(initialData.measuredAt), "yyyy-MM-dd'T'HH:mm"));
+            setTime(format(new Date(initialData.measuredAt), "HH:mm"));
             setIsFasting(initialData.isFasting);
             setIsPostMeal(initialData.isPostMeal);
             setMealType(initialData.mealType || "");
             setPartOfDay(initialData.partOfDay || "");
             setFoodText(initialData.foodText || "");
             setFeelingNotes(initialData.feelingNotes || "");
+            setError(null);
         } else {
             resetForm();
         }
-    }, [initialData, isOpen]);
+    }, [initialData, isOpen, selectedDate]);
 
     const resetForm = () => {
         setValue("");
-        setMeasuredAt(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+        setTime(format(new Date(), "HH:mm"));
         setIsFasting(false);
         setIsPostMeal(false);
         setMealType("");
         setPartOfDay("");
         setFoodText("");
         setFeelingNotes("");
+        setError(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
+
+        const dateToUse = initialData ? new Date(initialData.measuredAt) : (selectedDate || new Date());
+        const dateStr = format(dateToUse, "yyyy-MM-dd");
+        const combinedDate = combineDateAndTime(dateStr, time);
+
+        if (!combinedDate) {
+            setError("Ugyldig tidspunkt (muligens pga. sommertid-overgang).");
+            return;
+        }
+
         if (loading) return;
         setLoading(true);
 
         try {
             await onSubmit({
                 valueMmolL: value.replace(",", "."),
-                measuredAt: new Date(measuredAt),
+                measuredAt: combinedDate,
                 isFasting,
                 isPostMeal,
                 mealType: mealType || null,
@@ -66,18 +84,20 @@ export function ReadingModal({ isOpen, onClose, onSubmit, initialData }: Reading
                 feelingNotes: feelingNotes || null,
             });
             onClose();
-        } catch (err) {
-            console.error(err);
+        } catch (err: any) {
+            setError(err.message || "Noe gikk galt ved lagring.");
         } finally {
             setLoading(false);
         }
     };
 
+    const activeDate = initialData ? new Date(initialData.measuredAt) : (selectedDate || new Date());
+
     return (
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={initialData ? "Rediger måling" : "Ny måling"}
+            title={`${initialData ? "Rediger" : "Ny"} måling – ${format(activeDate, "eeee d. MMM", { locale: nb })}`}
         >
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
@@ -97,15 +117,21 @@ export function ReadingModal({ isOpen, onClose, onSubmit, initialData }: Reading
                     />
                 </div>
 
+                {error && (
+                    <div className="p-3 rounded-xl bg-red-50 text-red-600 text-sm border border-red-100">
+                        {error}
+                    </div>
+                )}
+
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                         Tidspunkt
                     </label>
                     <input
-                        type="datetime-local"
-                        value={measuredAt}
-                        onChange={(e) => setMeasuredAt(e.target.value)}
-                        className="input w-full"
+                        type="time"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                        className="input w-full text-xl"
                         required
                     />
                 </div>
@@ -162,13 +188,25 @@ export function ReadingModal({ isOpen, onClose, onSubmit, initialData }: Reading
                     />
                 </div>
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn-primary w-full py-4 text-lg mt-8"
-                >
-                    {loading ? "Lagrer..." : "Lagre måling"}
-                </button>
+                <div className="flex gap-3 mt-8">
+                    {initialData && (
+                        <DeleteReadingButton
+                            readingId={initialData.id}
+                            onDeleted={() => {
+                                onClose();
+                                // We might need a full refresh or rely on SWR revalidation
+                                window.location.reload();
+                            }}
+                        />
+                    )}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="btn-primary flex-1 py-4 text-lg"
+                    >
+                        {loading ? "Lagrer..." : "Lagre måling"}
+                    </button>
+                </div>
             </form>
         </Modal>
     );

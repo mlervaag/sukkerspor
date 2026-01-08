@@ -15,6 +15,7 @@ export default function LogPage() {
     const [currentWeek, setCurrentWeek] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedReading, setSelectedReading] = useState<GlucoseReading | null>(null);
+    const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
     const start = startOfWeek(currentWeek, { weekStartsOn: 1 });
     const end = endOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -28,21 +29,29 @@ export default function LogPage() {
     const daysInWeek = eachDayOfInterval({ start, end });
 
     const handleCreate = async (input: ReadingInput) => {
-        await fetch("/api/readings", {
+        const res = await fetch("/api/readings", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(input),
         });
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.error || "Kunne ikke opprette måling");
+        }
         mutate();
     };
 
     const handleUpdate = async (input: ReadingInput) => {
         if (!selectedReading) return;
-        await fetch(`/api/readings/${selectedReading.id}`, {
+        const res = await fetch(`/api/readings/${selectedReading.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(input),
         });
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.error || "Kunne ikke oppdatere måling");
+        }
         mutate();
     };
 
@@ -51,8 +60,9 @@ export default function LogPage() {
         setIsModalOpen(true);
     };
 
-    const openAdd = () => {
+    const openAdd = (day: Date) => {
         setSelectedReading(null);
+        setSelectedDay(day);
         setIsModalOpen(true);
     };
 
@@ -63,12 +73,6 @@ export default function LogPage() {
                     <h1 className="text-2xl font-bold text-primary">Logg</h1>
                     <p className="text-muted-foreground">Uke {format(currentWeek, "w", { locale: nb })}</p>
                 </div>
-                <button
-                    onClick={openAdd}
-                    className="bg-primary text-primary-foreground p-3 rounded-2xl shadow-lg active:scale-95 transition-transform"
-                >
-                    <Plus size={24} />
-                </button>
             </header>
 
             <div className="flex items-center justify-between bg-card p-2 rounded-2xl border border-border">
@@ -96,10 +100,21 @@ export default function LogPage() {
 
                     return (
                         <section key={day.toISOString()} className="space-y-3">
-                            <h2 className={`text-sm font-bold uppercase tracking-widest ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                                {format(day, "eeee d. MMMM", { locale: nb })}
-                                {isToday && <span className="ml-2 text-[10px] bg-primary/10 px-2 py-0.5 rounded-full">IDAG</span>}
-                            </h2>
+                            <div className="flex items-center justify-between">
+                                <h2 className={`text-sm font-bold uppercase tracking-widest ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                                    {format(day, "eeee d. MMMM", { locale: nb })}
+                                    {isToday && <span className="ml-2 text-[10px] bg-primary/10 px-2 py-0.5 rounded-full">IDAG</span>}
+                                </h2>
+                                {dayReadings.length > 0 && (
+                                    <button
+                                        onClick={() => openAdd(day)}
+                                        className="p-1 text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                                        title="Legg til måling"
+                                    >
+                                        <Plus size={20} />
+                                    </button>
+                                )}
+                            </div>
 
                             <div className="space-y-3">
                                 {dayReadings.length > 0 ? (
@@ -111,9 +126,15 @@ export default function LogPage() {
                                         />
                                     ))
                                 ) : (
-                                    <div className="card text-center text-xs text-muted-foreground py-6 border-dashed">
-                                        Ingen målinger logget
-                                    </div>
+                                    <button
+                                        onClick={() => openAdd(day)}
+                                        className="card w-full text-center py-8 border-dashed border-2 bg-transparent hover:bg-primary/5 hover:border-primary/30 transition-all group"
+                                    >
+                                        <div className="flex flex-col items-center gap-2 text-muted-foreground group-hover:text-primary">
+                                            <Plus size={24} className="opacity-50 group-hover:opacity-100" />
+                                            <span className="text-xs font-medium">Legg til måling</span>
+                                        </div>
+                                    </button>
                                 )}
                             </div>
                         </section>
@@ -126,6 +147,7 @@ export default function LogPage() {
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={selectedReading ? handleUpdate : handleCreate}
                 initialData={selectedReading}
+                selectedDate={selectedDay}
             />
         </div>
     );

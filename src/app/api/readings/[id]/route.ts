@@ -3,6 +3,7 @@ import { updateReading } from "@/lib/domain/reading";
 import { db } from "@/lib/db";
 import { glucoseReadings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { logEvent } from "@/lib/domain/event-log";
 
 export const dynamic = "force-dynamic";
 
@@ -35,13 +36,42 @@ export async function PUT(req: NextRequest, context: RouteContext) {
         const input = await req.json();
         const reading = await updateReading(id, input);
 
-        return NextResponse.json(reading, {
-            headers: {
-                "Cache-Control": "no-store",
-            },
+        return NextResponse.json({ success: true }, {
+            headers: { "Cache-Control": "no-store" }
         });
     } catch (error) {
-        return NextResponse.json({ error: "Failed to update reading" }, { status: 400 });
+        return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
 }
 
+export async function DELETE(
+    req: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const { id } = await params;
+
+        // Fetch for logging before deletion
+        const reading = await db.query.glucoseReadings.findFirst({
+            where: eq(glucoseReadings.id, id)
+        });
+
+        if (!reading) {
+            return NextResponse.json({ error: "Not found" }, { status: 404 });
+        }
+
+        await db.delete(glucoseReadings).where(eq(glucoseReadings.id, id));
+
+        await logEvent("delete", "glucose_reading", id, {
+            measuredAt: reading.measuredAt,
+            value: reading.valueMmolL
+        });
+
+        return NextResponse.json({ success: true }, {
+            headers: { "Cache-Control": "no-store" }
+        });
+    } catch (error) {
+        console.error("Delete failed:", error);
+        return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+    }
+}
