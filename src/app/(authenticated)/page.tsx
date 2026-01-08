@@ -16,6 +16,7 @@ import { QuickActionsCard } from "@/components/dashboard/quick-actions-card";
 import { ReadingModal } from "@/components/log/reading-modal";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { getOverviewQueryRange } from "@/lib/utils/query-params";
+import { LastReadingCard } from "@/components/dashboard/last-reading-card";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -76,8 +77,14 @@ export default function OverviewPage() {
                 </div>
             ) : (
                 <>
-                    {/* Target Status Widget */}
-                    <TargetStatusCard stats={stats} />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Target Status Widget (Static Reference) */}
+                        <TargetStatusCard stats={stats} />
+
+                        {/* New Last Reading Widget */}
+                        <LastReadingCard lastReading={readings && readings.length > 0 ? readings[readings.length - 1] : null} />
+                    </div>
 
                     {/* Over-Target Count Widget */}
                     <OverTargetCountCard
@@ -118,11 +125,11 @@ export default function OverviewPage() {
                             </div>
                         </div>
                     ) : (
-                        <div className="card relative overflow-hidden flex items-start gap-3 border-l-4 border-l-green-500">
-                            <CheckCircle2 className="text-green-500 mt-1 shrink-0" size={20} />
+                        <div className="card relative overflow-hidden flex items-center gap-3 px-4 py-3 border-l-4 border-l-green-500">
+                            <CheckCircle2 className="text-green-500 shrink-0" size={18} />
                             <div>
-                                <p className="font-semibold text-foreground">Godt jobbet!</p>
-                                <p className="text-sm text-muted-foreground">Du har logget målinger for i dag. Siste måling: {stats.lastLoggedAt ? format(stats.lastLoggedAt, "HH:mm") : ""}</p>
+                                <p className="text-sm font-semibold text-foreground">Godt jobbet!</p>
+                                <p className="text-xs text-muted-foreground">Logget i dag. Siste: {stats.lastLoggedAt ? format(stats.lastLoggedAt, "HH:mm") : ""}</p>
                             </div>
                         </div>
                     )}

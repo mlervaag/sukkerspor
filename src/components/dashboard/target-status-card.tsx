@@ -22,45 +22,18 @@ export function TargetStatusCard({ stats }: TargetStatusCardProps) {
             </h3>
 
             {/* Fasting row */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between py-1">
                 <span className="text-sm">Fastende</span>
-                <div className="flex items-center gap-2">
-                    <span className="font-semibold">
-                        {stats.averageFasting !== null
-                            ? `${stats.averageFasting.toFixed(1)} mmol/L`
-                            : "—"}
-                    </span>
-                    {fastingStatus === "within" && (
-                        <CheckCircle2 size={16} className="text-green-600" />
-                    )}
-                    {fastingStatus === "over" && (
-                        <AlertTriangle size={16} className="text-amber-600" />
-                    )}
-                </div>
+                <span className="font-semibold text-sm">&lt; 5,3 mmol/L</span>
             </div>
 
             {/* Post-meal row */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between py-1">
                 <span className="text-sm">Etter måltid</span>
-                <div className="flex items-center gap-2">
-                    <span className="font-semibold">
-                        {stats.averagePostMeal !== null
-                            ? `${stats.averagePostMeal.toFixed(1)} mmol/L`
-                            : "—"}
-                    </span>
-                    {postMealStatus === "within" && (
-                        <CheckCircle2 size={16} className="text-green-600" />
-                    )}
-                    {postMealStatus === "over" && (
-                        <AlertTriangle size={16} className="text-amber-600" />
-                    )}
-                </div>
+                <span className="font-semibold text-sm">&lt; 6,7 mmol/L</span>
             </div>
 
-            {/* Reference line */}
-            <p className="text-xs text-muted-foreground pt-1 border-t border-border">
-                Referanse: fastende &lt; 5,3 · etter måltid &lt; 6,7 mmol/L
-            </p>
+
         </div>
     );
 }

@@ -31,18 +31,25 @@ export function DeleteDayFlow() {
 
     return (
         <div className="space-y-3">
-            <div className="flex gap-2">
-                <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="input flex-1"
-                />
+            <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground block">
+                        Velg dato
+                    </label>
+                    <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="input w-full"
+                    />
+                </div>
+
                 <button
                     onClick={() => setIsConfirmOpen(true)}
-                    className="btn-secondary text-red-600 border-red-200 hover:bg-red-50"
+                    className="btn-destructive w-full flex items-center justify-center gap-2"
                 >
                     <Trash2 size={18} />
+                    Slett dag {format(new Date(date), "dd.MM.yyyy")}
                 </button>
             </div>
 

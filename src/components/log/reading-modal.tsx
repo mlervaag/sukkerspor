@@ -64,6 +64,25 @@ export function ReadingModal({ isOpen, onClose, onSubmit, initialData, selectedD
         const dateStr = format(dateToUse, "yyyy-MM-dd");
         const combinedDate = combineDateAndTime(dateStr, time);
 
+        if (!value) {
+            setError("Skriv inn en verdi.");
+            return;
+        }
+
+        // Handle comma input by replacing with dot, though type="number" usually dictates dot.
+        // We use value directly which is state string.
+        const numericValue = parseFloat(value.replace(",", "."));
+
+        if (isNaN(numericValue)) {
+            setError("Ugyldig verdi.");
+            return;
+        }
+
+        if (numericValue <= 0 || numericValue > 25.0) {
+            setError("Verdien virker uvanlig. Sjekk at den er riktig.");
+            return;
+        }
+
         if (!combinedDate) {
             setError("Ugyldig tidspunkt (muligens pga. sommertid-overgang).");
             return;
@@ -74,7 +93,7 @@ export function ReadingModal({ isOpen, onClose, onSubmit, initialData, selectedD
 
         try {
             await onSubmit({
-                valueMmolL: value.replace(",", "."),
+                valueMmolL: numericValue.toFixed(1), // Normalize to 1 decimal
                 measuredAt: combinedDate,
                 isFasting,
                 isPostMeal,
@@ -109,12 +128,19 @@ export function ReadingModal({ isOpen, onClose, onSubmit, initialData, selectedD
                         step="0.1"
                         inputMode="decimal"
                         value={value}
-                        onChange={(e) => setValue(e.target.value)}
-                        className="input w-full text-2xl font-bold"
+                        onChange={(e) => {
+                            setValue(e.target.value);
+                            setError(null);
+                        }}
+                        className="input w-full text-2xl font-bold placeholder:text-muted-foreground/30"
                         placeholder="0.0"
                         required
                         autoFocus
                     />
+                    {/* Inline error for value */}
+                    {!initialData && value === "" && (
+                        <p className="text-xs text-muted-foreground">Skriv inn en verdi.</p>
+                    )}
                 </div>
 
                 {error && (

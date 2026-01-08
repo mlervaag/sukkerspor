@@ -121,17 +121,21 @@ export default function LogPage() {
                                         {isToday && <span className="ml-2 text-[10px] bg-primary/10 px-2 py-0.5 rounded-full">IDAG</span>}
                                     </h2>
                                     {dayReadings.length > 0 && (
-                                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                                            <span>{dayReadings.length} {dayReadings.length === 1 ? "måling" : "målinger"}</span>
+                                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground">
+                                                {dayReadings.length} {dayReadings.length === 1 ? "måling" : "målinger"}
+                                            </span>
                                             {lastReading && (
-                                                <span className="opacity-70">
-                                                    · siste {format(new Date(lastReading.measuredAt), "HH:mm")}: {lastReading.valueMmolL}
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground">
+                                                    Siste {format(new Date(lastReading.measuredAt), "HH:mm")}
                                                 </span>
                                             )}
                                             {hasHighReading && (
-                                                <span className="text-amber-500 font-medium">⚠</span>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-600 border border-amber-100">
+                                                    Over mål
+                                                </span>
                                             )}
-                                        </p>
+                                        </div>
                                     )}
                                 </div>
                                 {dayReadings.length > 0 && (
