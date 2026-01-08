@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
         const data = await getReportData(range);
         const pdfBytes = await generatePDF(data, lang);
 
-        const filename = `blodsukker_rapport_${range}_${formatDate(new Date())}.pdf`;
+        const filename = `blodsukker_rapport_${range}.pdf`;
 
         return new NextResponse(pdfBytes as any, {
             headers: {
@@ -32,8 +32,4 @@ export async function GET(req: NextRequest) {
         console.error("PDF Generation failed:", error);
         return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
     }
-}
-
-function formatDate(date: Date) {
-    return date.toISOString().split("T")[0];
 }

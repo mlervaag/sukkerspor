@@ -60,11 +60,13 @@ export async function DELETE(
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
-        await db.delete(glucoseReadings).where(eq(glucoseReadings.id, id));
-
-        await logEvent("delete", "glucose_reading", id, {
-            measuredAt: reading.measuredAt,
-            value: reading.valueMmolL
+        // Transactional delete + log for atomicity
+        await db.transaction(async (tx) => {
+            await tx.delete(glucoseReadings).where(eq(glucoseReadings.id, id));
+            await logEvent("delete", "glucose_reading", id, {
+                measuredAt: reading.measuredAt,
+                value: reading.valueMmolL
+            });
         });
 
         return NextResponse.json({ success: true }, {

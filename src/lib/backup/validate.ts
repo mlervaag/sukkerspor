@@ -14,8 +14,13 @@ export function validateBackup(data: any): BackupData {
     }
 
     // Basic structure validation for each reading
+    // Accept both camelCase (current export) and snake_case (legacy) keys
     for (const r of data.readings) {
-        if (!r.id || !r.measured_at || typeof r.value_mmol_l !== "number") {
+        const id = r.id;
+        const measuredAt = r.measuredAt || r.measured_at;
+        const valueMmolL = r.valueMmolL ?? r.value_mmol_l;
+
+        if (!id || !measuredAt || (typeof valueMmolL !== "number" && typeof valueMmolL !== "string")) {
             throw new Error(`Invalid reading data in backup: ${JSON.stringify(r)}`);
         }
     }

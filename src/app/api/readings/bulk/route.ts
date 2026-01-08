@@ -17,7 +17,7 @@ export async function DELETE(req: NextRequest) {
         if (all) {
             await db.transaction(async (tx) => {
                 await tx.delete(glucoseReadings);
-                await logEvent("delete", "backup", undefined, { scope: "all" });
+                await logEvent("delete", "glucose_reading", undefined, { scope: "all" });
             });
             return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
         }

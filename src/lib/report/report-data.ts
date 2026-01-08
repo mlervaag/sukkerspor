@@ -18,13 +18,19 @@ export async function getReportData(range: ReportRange, date: Date = new Date())
         end = endOfMonth(date);
     }
 
-    const query = db.select().from(glucoseReadings);
-
+    let readings;
     if (start && end) {
-        query.where(between(glucoseReadings.measuredAt, start, end));
+        readings = await db
+            .select()
+            .from(glucoseReadings)
+            .where(between(glucoseReadings.measuredAt, start, end))
+            .orderBy(asc(glucoseReadings.measuredAt));
+    } else {
+        readings = await db
+            .select()
+            .from(glucoseReadings)
+            .orderBy(asc(glucoseReadings.measuredAt));
     }
-
-    const readings = await query.orderBy(asc(glucoseReadings.measuredAt));
 
     // Stats calculations
     const stats = calculateStats(readings as any as GlucoseReading[]);
