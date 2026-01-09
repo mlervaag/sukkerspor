@@ -30,7 +30,7 @@ export function GoalStatusCard({ fasting, postMeal, windowLabel }: GoalStatusCar
                 <div className="flex items-center justify-between py-2">
                     <div className="flex flex-col">
                         <span className="text-sm font-medium text-muted-foreground">{label}</span>
-                        <span className="text-[10px] text-muted-foreground/70">Mål: {limit}</span>
+                        <span className="text-[10px] text-muted-foreground/70">Ref.: {limit}</span>
                     </div>
                     <span className="text-muted-foreground text-sm">—</span>
                 </div>
@@ -46,7 +46,7 @@ export function GoalStatusCard({ fasting, postMeal, windowLabel }: GoalStatusCar
                 <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium">{label}</span>
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Mål: {limit}</span>
+                        <span className="text-xs text-muted-foreground">Ref.: {limit}</span>
                         {overCount > 0 && (
                             <span className="text-[10px] font-medium text-amber-600 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full">
                                 {overCount} over
@@ -58,8 +58,8 @@ export function GoalStatusCard({ fasting, postMeal, windowLabel }: GoalStatusCar
                 <div className="flex flex-col items-end">
                     <div className="flex items-baseline gap-1">
                         <span className={`text-xl font-bold tab-nums ${pct >= 80 ? "text-green-600 dark:text-green-500" :
-                                pct >= 50 ? "text-amber-600 dark:text-amber-500" :
-                                    "text-red-600 dark:text-red-500"
+                            pct >= 50 ? "text-amber-600 dark:text-amber-500" :
+                                "text-red-600 dark:text-red-500"
                             }`}>
                             {pct}%
                         </span>

@@ -187,7 +187,7 @@ export function ReadingModal({ isOpen, onClose, onSubmit, initialData, selectedD
                             Måltid
                         </label>
                         <div className="flex flex-wrap gap-2">
-                            {["Frokost", "Lunsj", "Middag", "Kvelds", "Mellommåltid"].map((m) => (
+                            {["Frokost", "Lunsj", "Middag", "Kveldsmat", "Mellommåltid"].map((m) => (
                                 <button
                                     key={m}
                                     type="button"

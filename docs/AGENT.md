@@ -31,6 +31,29 @@ If you see `EINVAL readlink` in `.next/server...` during `npm run build`:
 - **Fast Check**: `npm run typecheck` saves you 90% of runtime errors. Run it often.
 - **Smoke Test**: `node scripts/smoke.mjs --password=...` is better than clicking around manually.
 
+## 🎨 UI & Styling
+
+### The Theme System
+- CSS variables live in `src/app/globals.css` (`:root` for light, `.dark` for dark).
+- Tailwind uses these via `tailwind.config.ts`. Always extend there if adding new semantic colors.
+- **Available tokens**: `background`, `foreground`, `card`, `primary`, `muted`, `border`, `success`, `warning`, `destructive` (with muted variants).
+
+### Dark Mode Gotchas
+- **Trap**: `bg-slate-200` or other hardcoded Tailwind colors become invisible in dark mode. Always prefer `bg-muted` or semantic tokens.
+- **VS Code Warning**: `@tailwind` directives show as "Unknown at rule" warnings. Ignore them—PostCSS handles it correctly.
+
+### Button Classes
+- `.btn-primary`: Primary actions (already styled)
+- `.btn-secondary`: Cancel/secondary actions (muted background)
+- `.btn-destructive`: Danger actions (uses `--destructive` token)
+
+### Copy & Terminology (IMPORTANT!)
+- **Always check `docs/COPY_AND_DISCLAIMERS.md`** before writing user-facing text.
+- **Use**: "Referanse" / "Ref." — NOT "Mål" (goal)
+- **Use**: "Over referanse" — NOT "Over mål"
+- **Meal types**: "Kveldsmat" — NOT "Kvelds"
+- Avoid imperative language ("du må"). Use "det anbefales" instead.
+
 ## 🚀 Future Ideas (That I didn't get to)
 - **Data Visualization**: We use SVG/Divs for charts to save bundle size. A library like `Recharts` might be nice eventually, but verify bundle size impact first.
 - **Dark Mode**: Tailwind handles it, but check contrast ratios on the Amber/Red indicators in Dark Mode.

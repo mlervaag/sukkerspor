@@ -23,6 +23,18 @@ const config: Config = {
                     DEFAULT: "var(--muted)",
                     foreground: "var(--muted-foreground)",
                 },
+                success: {
+                    DEFAULT: "var(--success)",
+                    muted: "var(--success-muted)",
+                },
+                warning: {
+                    DEFAULT: "var(--warning)",
+                    muted: "var(--warning-muted)",
+                },
+                destructive: {
+                    DEFAULT: "var(--destructive)",
+                    muted: "var(--destructive-muted)",
+                },
                 border: "var(--border)",
             },
             borderRadius: {

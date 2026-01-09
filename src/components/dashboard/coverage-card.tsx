@@ -17,7 +17,7 @@ export function CoverageCard({ fastingDays, postMealDays }: CoverageCardProps) {
                     <span className="text-sm">Fastende</span>
                     <span className="font-semibold">{fastingDays}/7 dager</span>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-muted rounded-full h-2.5">
+                <div className="w-full bg-muted rounded-full h-2.5">
                     <div
                         className="bg-primary/90 dark:bg-primary rounded-full h-2.5 transition-all"
                         style={{ width: `${(fastingDays / 7) * 100}%` }}
@@ -30,7 +30,7 @@ export function CoverageCard({ fastingDays, postMealDays }: CoverageCardProps) {
                     <span className="text-sm">Etter måltid</span>
                     <span className="font-semibold text-sm">{postMealDays}/7 dager</span>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-muted rounded-full h-2.5">
+                <div className="w-full bg-muted rounded-full h-2.5">
                     <div
                         className="bg-primary/90 dark:bg-primary rounded-full h-2.5 transition-all"
                         style={{ width: `${(postMealDays / 7) * 100}%` }}
