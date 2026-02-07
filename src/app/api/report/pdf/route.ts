@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReportData, ReportRange } from "@/lib/report/report-data";
-import { generatePDF } from "@/lib/report/generate-pdf";
+import { generatePDF, ReportOptions } from "@/lib/report/generate-pdf";
 import { Language } from "@/lib/report/translations";
 import { getSettings } from "@/lib/domain/settings";
 
@@ -20,13 +20,21 @@ export async function GET(req: NextRequest) {
 
         const lang = (["no", "en"].includes(langString || "") ? langString : "no") as Language;
 
-
         if (!["week", "month", "all"].includes(range)) {
             return NextResponse.json({ error: "Invalid range" }, { status: 400 });
         }
 
+        // Report content options (all default to true if not specified)
+        const options: ReportOptions = {
+            includeReadings: searchParams.get("readings") !== "0",
+            includeMealInfo: searchParams.get("meals") !== "0",
+            includeNotes: searchParams.get("notes") !== "0",
+            includeInsulin: searchParams.get("insulin") !== "0",
+            includeExtendedStats: searchParams.get("extStats") !== "0",
+        };
+
         const data = await getReportData(range);
-        const pdfBytes = await generatePDF(data, lang);
+        const pdfBytes = await generatePDF(data, lang, options);
 
         const filename = `blodsukker_rapport_${range}.pdf`;
 
