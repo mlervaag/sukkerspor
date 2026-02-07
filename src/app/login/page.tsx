@@ -39,7 +39,7 @@ export default function LoginPage() {
             <div className="w-full max-w-sm space-y-8">
                 <div className="text-center">
                     <h1 className="text-3xl font-bold tracking-tight text-primary">
-                        Blodsukker
+                        Sukkerspor
                     </h1>
                     <p className="mt-2 text-muted-foreground">
                         Logg inn for å fortsette

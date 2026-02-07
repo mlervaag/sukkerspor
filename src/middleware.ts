@@ -14,7 +14,7 @@ export async function middleware(req: NextRequest) {
         return NextResponse.next();
     }
 
-    const session = req.cookies.get("blodsukker_session")?.value;
+    const session = req.cookies.get("sukkerspor_session")?.value;
     const authenticated = await isValidSession(session);
 
     if (!authenticated) {

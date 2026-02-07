@@ -1,138 +1,115 @@
 # Sukkerspor
 
-A mobile-first blood glucose logging app for gestational diabetes, built with Next.js, Tailwind CSS, and Drizzle ORM on Neon Postgres.
+En mobilvennlig app for logging av blodsukker ved svangerskapsdiabetes. Bygget med Next.js, Tailwind CSS og Drizzle ORM på Neon Postgres.
 
-## Features
+## Funksjoner
 
-### 📊 Dashboard (Overview v1.1)
-- **Target Status Summary** — Instant view of fasting and post-meal averages compared to clinical reference values.
-- **Over-Target Tracking** — 7-day and 14-day counts of readings above reference, with clinical threshold alerts.
-- **Coverage Metrics** — Visual tracking of logging frequency for fasting and post-meal readings.
-- **Meal Breakdown** — Detailed analytics per meal type (breakfast, lunch, etc.) with over-target proportions.
-- **Trend Sparkline** — 7-day smoothed trend visualization (Stabil, Økende, Synkende).
-- **Quick Actions** — Fast entry modal and report generation access.
+- **Dashboard** — Oversikt over fastende- og ettermåltidsverdier med fargekodede grenseverdier (5,3 / 6,7 mmol/L)
+- **Logging** — Registrer blodsukkerverdier med måltidstype, mat-notater og følelser
+- **Insulinsporing** — Logg insulin-doser (langtids- og hurtigvirkende) med korrelasjonsanalyse mot neste dags fastende verdier
+- **PDF-rapport** — Generer rapport på norsk eller engelsk for lege/jordmor, med valgfritt innhold og fargekoding
+- **Backup** — Eksporter og importer alle data som JSON
+- **Sikkerhet** — Passord-beskyttet med HMAC-signerte session-cookies
 
-### 📝 Logging & Management
-- **Smart Logging** — Categorized readings (Fasting vs. Post-Meal) with meal type and food notes.
-- **Log Indicators** — Visual amber-border markers for readings exceeding target thresholds.
-- **Data Mobility** — JSON Export/Import with schema versioning for backups and migration.
-- **Detailed Reports** — Generate PDF summaries in Norwegian or English for medical consultation.
-- **Privacy First** — All data is private to the user, with localized storage logic.
+## Kom i gang (gratis med Vercel + Neon)
 
-### 🔒 Security & Safety
-- **Clinical Integrity** — Neutral neutral wording; targets presented as "Referanseverdier" based on Helsenorge/Diabetesforbundet.
-- **Authentication** — Password-protected access with Edge-compatible HMAC session tokens.
-- **Secure Cookies** — HttpOnly, Secure (Production), and SameSite=Lax cookie policies.
+Alt du trenger er en GitHub-konto. Både Vercel og Neon har gratis planer som er mer enn nok for denne appen.
 
----
+### 1. Fork dette repoet
+
+Trykk **Fork** øverst til høyre på GitHub.
+
+### 2. Opprett database på Neon
+
+1. Gå til [neon.tech](https://neon.tech) og opprett en gratis konto
+2. Lag et nytt prosjekt (velg region **eu-central-1** for best ytelse fra Norge)
+3. Kopier **connection string** — den ser slik ut:
+   ```
+   postgresql://bruker:passord@ep-xxx.eu-central-1.aws.neon.tech/neondb?sslmode=require
+   ```
+
+### 3. Kjør database-migreringer
+
+I Neon-dashbordet, gå til **SQL Editor** og kjør innholdet i disse filene (i rekkefølge):
+
+1. `drizzle/migrations/0000_initial.sql`
+2. `drizzle/migrations/0001_add_insulin_doses.sql`
+
+Du kan kopiere SQL-en fra filene i repoet og lime den inn i SQL Editor, og trykke **Run**.
+
+### 4. Deploy til Vercel
+
+1. Gå til [vercel.com](https://vercel.com) og logg inn med GitHub
+2. Trykk **Add New Project** og velg din fork
+3. Under **Environment Variables**, legg til:
+
+   | Variabel | Verdi |
+   |----------|-------|
+   | `DATABASE_URL` | Connection string fra Neon (steg 2) |
+   | `APP_PASSWORD` | Et passord du velger selv for å logge inn |
+   | `APP_COOKIE_SECRET` | En tilfeldig streng på minst 32 tegn* |
+
+4. Trykk **Deploy**
+
+> \* Generer en tilfeldig cookie-secret med: `openssl rand -hex 32`
+
+### 5. Ferdig
+
+Appen er nå live på `ditt-prosjekt.vercel.app`. Logg inn med passordet du valgte i steg 4.
+
+## Lokal utvikling
+
+```bash
+npm install
+cp .env.local.example .env.local   # Fyll inn DATABASE_URL, APP_PASSWORD, APP_COOKIE_SECRET
+npm run dev                         # Åpner http://localhost:3000
+```
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Framework** | Next.js 14 (App Router) |
-| **Styling** | Vanilla CSS + Tailwind |
-| **Database** | Neon Postgres + Drizzle ORM |
-| **Auth** | HMAC-signed session cookies |
-| **Testing** | Vitest + Custom Smoke Tests |
-| **PDF** | pdf-lib |
+| Lag | Teknologi |
+|-----|-----------|
+| Framework | Next.js 14 (App Router) |
+| Styling | Tailwind CSS |
+| Database | Neon Postgres + Drizzle ORM |
+| Auth | HMAC-SHA256 session cookies |
+| PDF | pdf-lib |
+| Testing | Vitest |
 
----
+## API
 
-## Project Structure
+| Endepunkt | Beskrivelse |
+|-----------|-------------|
+| `GET/POST /api/readings` | Liste og opprett blodsukkermålinger |
+| `PUT/DELETE /api/readings/[id]` | Oppdater og slett enkeltmåling |
+| `GET/POST /api/insulin-doses` | Liste og opprett insulindoser |
+| `PUT/DELETE /api/insulin-doses/[id]` | Oppdater og slett insulindose |
+| `GET /api/report/pdf` | Generer PDF-rapport |
+| `GET /api/backup/export` | Eksporter alle data som JSON |
+| `POST /api/backup/import` | Importer data fra JSON-backup |
+| `GET /api/settings` | Brukerinnstillinger |
+| `GET /api/health` | Database-helsesjekk |
 
-```
-src/
-├── app/
-│   ├── (authenticated)/    # Dashboard, Log, Settings (Protected)
-│   ├── api/                # Readings, Backup, Report, Health API
-│   └── login/              # Public login entry
-├── components/
-│   ├── dashboard/          # Specialized v1.1 stat widgets
-│   ├── log/                # Reading cards, Entry modals
-│   └── report/             # PDF generation triggers
-├── lib/
-│   ├── auth/               # Edge-compatible crypto sessions
-│   ├── db/                 # Drizzle schema & Postgres pool
-│   ├── domain/             # Analytics engine & clinical logic
-│   └── report/             # PDF templates & translations
-└── middleware.ts           # Global auth guarding
-```
+## Database
 
----
+Tre hovedtabeller:
 
-## Getting Started
+- **glucose_readings** — Blodsukkerverdier med tidspunkt, type (fastende/etter måltid), måltidsinfo og notater
+- **insulin_doses** — Insulindoser med type (langtids-/hurtigvirkende), navn, dose og tidspunkt
+- **user_settings** — Innstillinger (termin, diagnosedato, rapportspråk)
+- **event_log** — Revisjonslogg for opprettelse, sletting og import
 
-### Setup
+## Referanseverdier
 
-1. **Clone & Install**:
-   ```bash
-   npm install
-   ```
+Appen bruker grenseverdier fra Helsenorge og Diabetesforbundet:
 
-2. **Environment Configuration**:
-   Copy `.env.local.example` to `.env.local` and configure your credentials:
-   ```env
-   DATABASE_URL="postgres://..."
-   APP_PASSWORD="your-secure-password"
-   APP_COOKIE_SECRET="32-char-random-string"
-   ```
+| Type | Grenseverdi |
+|------|-------------|
+| Fastende | < 5,3 mmol/L |
+| Etter måltid (1,5t) | < 6,7 mmol/L |
 
-3. **Database Migration**:
-   ```bash
-   npx drizzle-kit push:pg
-   ```
+Disse er veiledende. Lege eller jordmor kan ha satt andre mål for din situasjon.
 
-4. **Run Development Server**:
-   ```bash
-   npm run dev
-   ```
+## Lisens
 
-### High-Reliability Build (Windows)
-If you encounter `readlink EINVAL` errors during build, use the integrated clean script:
-```bash
-npm run clean && npm run build
-```
-
----
-
-## API Reference
-
-### Glucose Readings
-- `GET /api/readings` — List readings (supports `weekStartDayKey` or 14d lookback).
-- `POST /api/readings` — Create new log entry.
-- `GET /api/readings/[id]` — Fetch single entry.
-- `PUT /api/readings/[id]` — Update entry.
-- `DELETE /api/readings/bulk` — Delete by `dayKey`, `week`, or recursive `all=true`.
-
-### System & Reports
-- `GET /api/report/pdf` — Generates clinical PDF (Range: `week`, `month`, `all`).
-- `GET /api/settings` — Fetch user preferences (singleton).
-- `GET /api/backup/export` — JSON Data dump.
-- `GET /api/health` — DB connectivity check.
-
----
-
-## Database Schema
-
-### `glucose_readings`
-Core clinical data storage.
-- `measured_at`: UTC Timestamp.
-- `day_key`: Derived YYYY-MM-DD (Europe/Oslo).
-- `value_mmol_l`: Numeric (4,1).
-- `is_fasting` / `is_post_meal`: Binary classification.
-- `meal_type`: Categorical (frokost, lunsj, etc.).
-- `food_text`: Text-based food logs.
-
-### `user_settings` (Singleton)
-- `due_date`: Clinical target date.
-- `diagnosis_date`: Reference point for reports.
-- `report_language`: Preferred output (no/en).
-
-### `event_log`
-Audit trail for significant mutations (create, delete, import).
-
----
-
-## License
-Private project.
+Privat prosjekt.

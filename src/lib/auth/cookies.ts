@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-const AUTH_COOKIE_NAME = "blodsukker_session";
+const AUTH_COOKIE_NAME = "sukkerspor_session";
 
 export async function setAuthCookie(sessionToken: string) {
     const cookieStore = await cookies();
