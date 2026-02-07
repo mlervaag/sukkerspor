@@ -25,12 +25,18 @@ export async function GET(req: NextRequest) {
         }
 
         // Report content options (all default to true if not specified)
+        const typeFilterParam = searchParams.get("typeFilter");
+        const readingTypeFilter = (typeFilterParam === "fasting" || typeFilterParam === "postMeal")
+            ? typeFilterParam
+            : "all" as const;
+
         const options: ReportOptions = {
             includeReadings: searchParams.get("readings") !== "0",
             includeMealInfo: searchParams.get("meals") !== "0",
             includeNotes: searchParams.get("notes") !== "0",
             includeInsulin: searchParams.get("insulin") !== "0",
             includeExtendedStats: searchParams.get("extStats") !== "0",
+            readingTypeFilter,
         };
 
         const data = await getReportData(range);

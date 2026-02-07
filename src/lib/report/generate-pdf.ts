@@ -11,6 +11,7 @@ export interface ReportOptions {
     includeNotes: boolean;
     includeInsulin: boolean;
     includeExtendedStats: boolean;
+    readingTypeFilter: "all" | "fasting" | "postMeal";
 }
 
 // Colours
@@ -42,6 +43,7 @@ export async function generatePDF(
         includeNotes: true,
         includeInsulin: true,
         includeExtendedStats: true,
+        readingTypeFilter: "all",
     },
 ) {
     const t = TRANSLATIONS[lang] || TRANSLATIONS.no;
@@ -91,19 +93,26 @@ export async function generatePDF(
     );
     y -= 30;
 
+    // Apply reading type filter
+    const filteredReadings = options.readingTypeFilter === "fasting"
+        ? data.readings.filter(r => r.isFasting)
+        : options.readingTypeFilter === "postMeal"
+            ? data.readings.filter(r => r.isPostMeal)
+            : data.readings;
+
     // ── Summary Section ──
     if (data.stats) {
         page.drawText(t.header_summary, { x: 50, y, size: 14, font: fontBold });
         y -= 20;
 
-        drawStat(t.total_readings, `${data.stats.total}`);
+        drawStat(t.total_readings, `${filteredReadings.length}`);
 
-        if (data.stats.avgFasting !== null) {
+        if (options.readingTypeFilter !== "postMeal" && data.stats.avgFasting !== null) {
             const avgF = data.stats.avgFasting;
             const color = avgF > THRESHOLDS.FASTING ? COLOR_RED : COLOR_GREEN;
             drawStat(t.fasting_summary, `${avgF.toFixed(1)} mmol/L`, color);
         }
-        if (data.stats.avgPostMeal !== null) {
+        if (options.readingTypeFilter !== "fasting" && data.stats.avgPostMeal !== null) {
             const avgP = data.stats.avgPostMeal;
             const color = avgP > THRESHOLDS.POST_MEAL ? COLOR_AMBER : COLOR_GREEN;
             drawStat(t.post_meal_summary, `${avgP.toFixed(1)} mmol/L`, color);
@@ -123,6 +132,9 @@ export async function generatePDF(
             const col2x = 300;
 
             // Draw column content at absolute y positions, return how far down it went
+            const showFasting = options.readingTypeFilter !== "postMeal";
+            const showPostMeal = options.readingTypeFilter !== "fasting";
+
             const drawWindowColumn = (
                 startX: number,
                 startY: number,
@@ -131,7 +143,7 @@ export async function generatePDF(
             ): number => {
                 let cy = startY;
 
-                if (fasting.total > 0) {
+                if (showFasting && fasting.total > 0) {
                     const pct = ((fasting.within / fasting.total) * 100).toFixed(0);
                     page.drawText(
                         `${t.within_target_fasting}: ${fasting.within}/${fasting.total} (${pct}%)`,
@@ -154,7 +166,7 @@ export async function generatePDF(
                     }
                 }
 
-                if (postMeal.total > 0) {
+                if (showPostMeal && postMeal.total > 0) {
                     const pct = ((postMeal.within / postMeal.total) * 100).toFixed(0);
                     page.drawText(
                         `${t.within_target_post_meal}: ${postMeal.within}/${postMeal.total} (${pct}%)`,
@@ -196,7 +208,7 @@ export async function generatePDF(
     }
 
     // ── Readings Table ──
-    if (options.includeReadings && data.readings.length > 0) {
+    if (options.includeReadings && filteredReadings.length > 0) {
         ensureSpace(80);
 
         // Build dynamic columns based on options
@@ -217,7 +229,7 @@ export async function generatePDF(
 
         drawReadingHeader();
 
-        for (const r of data.readings) {
+        for (const r of filteredReadings) {
             ensureSpace(70);
             if (y === height - 50) drawReadingHeader(); // after page break, re-draw header
 

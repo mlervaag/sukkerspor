@@ -34,6 +34,7 @@ export function GenerateReportFlow() {
     const [includeNotes, setIncludeNotes] = useState(true);
     const [includeInsulin, setIncludeInsulin] = useState(true);
     const [includeExtStats, setIncludeExtStats] = useState(true);
+    const [typeFilter, setTypeFilter] = useState<"all" | "fasting" | "postMeal">("all");
 
     useEffect(() => {
         if (settings?.reportLanguage) {
@@ -64,6 +65,7 @@ export function GenerateReportFlow() {
             notes: includeNotes ? "1" : "0",
             insulin: includeInsulin ? "1" : "0",
             extStats: includeExtStats ? "1" : "0",
+            typeFilter,
         });
         const url = `/api/report/pdf?${params.toString()}`;
 
@@ -103,6 +105,19 @@ export function GenerateReportFlow() {
                         <option value="en">English</option>
                     </select>
                 </div>
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-sm font-medium">M&aring;lingstype</label>
+                <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value as "all" | "fasting" | "postMeal")}
+                    className="input w-full"
+                >
+                    <option value="all">Alle m&aring;linger</option>
+                    <option value="fasting">Kun fastende</option>
+                    <option value="postMeal">Kun etter m&aring;ltid</option>
+                </select>
             </div>
 
             <div className="space-y-2">
