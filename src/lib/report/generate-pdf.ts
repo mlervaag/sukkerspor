@@ -27,6 +27,11 @@ const PAGE_W = 595.28;
 const PAGE_H = 841.89;
 const ROW_H = 18;
 
+// WinAnsi-safe text helper - pdf-lib with standard fonts only supports WinAnsi encoding
+function safe(text: string): string {
+    return text.replace(/[^\x00-\x7F\xA0-\xFF\u0152\u0153\u0160\u0161\u0178\u017D\u017E\u0192\u02C6\u02DC\u2013\u2014\u2018\u2019\u201A\u201C\u201D\u201E\u2020\u2021\u2022\u2026\u2030\u2039\u203A\u20AC\u2122]/g, "");
+}
+
 export async function generatePDF(
     data: {
         readings: GlucoseReading[];
@@ -88,7 +93,7 @@ export async function generatePDF(
 
     // Reference thresholds line
     page.drawText(
-        `${t.threshold_fasting}: \u2264${THRESHOLDS.FASTING} mmol/L    ${t.threshold_post_meal}: \u2264${THRESHOLDS.POST_MEAL} mmol/L`,
+        `${t.threshold_fasting}: <=${THRESHOLDS.FASTING} mmol/L    ${t.threshold_post_meal}: <=${THRESHOLDS.POST_MEAL} mmol/L`,
         { x: 50, y, size: 9, font, color: COLOR_GRAY }
     );
     y -= 30;
@@ -257,7 +262,7 @@ export async function generatePDF(
             page.drawText(format(new Date(r.measuredAt), "dd.MM HH:mm"), { x: xOffsets[0], y, size: 9, font });
 
             // Value (colored)
-            const valueStr = isOver ? `${r.valueMmolL} \u25B2` : `${r.valueMmolL}`;
+            const valueStr = isOver ? `${r.valueMmolL} *` : `${r.valueMmolL}`;
             page.drawText(valueStr, { x: xOffsets[1], y, size: 9, font: isOver ? fontBold : font, color: valueColor });
 
             // Type
@@ -272,14 +277,14 @@ export async function generatePDF(
                     const truncated = r.foodText.length > 25 ? r.foodText.substring(0, 25) + "..." : r.foodText;
                     mealParts.push(truncated);
                 }
-                page.drawText(mealParts.join(": "), { x: xOffsets[colIdx], y, size: 9, font });
+                page.drawText(safe(mealParts.join(": ")), { x: xOffsets[colIdx], y, size: 9, font });
                 colIdx++;
             }
 
             // Notes (optional)
             if (options.includeNotes) {
                 const notes = r.feelingNotes ? r.feelingNotes.substring(0, 30) + (r.feelingNotes.length > 30 ? "..." : "") : "";
-                page.drawText(notes, { x: xOffsets[colIdx], y, size: 9, font });
+                page.drawText(safe(notes), { x: xOffsets[colIdx], y, size: 9, font });
             }
 
             y -= ROW_H;
@@ -321,8 +326,8 @@ export async function generatePDF(
             page.drawText(format(new Date(d.administeredAt), "dd.MM HH:mm"), { x: insulinX[0], y, size: 9, font });
             page.drawText(`${d.doseUnits} E`, { x: insulinX[1], y, size: 9, font });
             page.drawText(typeLabel, { x: insulinX[2], y, size: 9, font });
-            page.drawText(nameStr, { x: insulinX[3], y, size: 9, font });
-            page.drawText(notesStr, { x: insulinX[4], y, size: 9, font });
+            page.drawText(safe(nameStr), { x: insulinX[3], y, size: 9, font });
+            page.drawText(safe(notesStr), { x: insulinX[4], y, size: 9, font });
             y -= ROW_H;
         }
     }
