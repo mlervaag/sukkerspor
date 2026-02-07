@@ -1,5 +1,18 @@
 import { pgTable, uuid, timestamp, numeric, boolean, text } from "drizzle-orm/pg-core";
 
+export const insulinDoses = pgTable("insulin_doses", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    administeredAt: timestamp("administered_at", { withTimezone: true }).notNull(),
+    dayKey: text("day_key").notNull(), // YYYY-MM-DD in Europe/Oslo
+    doseUnits: numeric("dose_units", { precision: 4, scale: 1 }).notNull(),
+    insulinType: text("insulin_type").notNull(), // 'long_acting' | 'rapid_acting'
+    insulinName: text("insulin_name"), // e.g. 'Insulatard', 'NovoRapid'
+    mealContext: text("meal_context"), // for rapid_acting: frokost, lunsj, middag, kveldsmat
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const glucoseReadings = pgTable("glucose_readings", {
     id: uuid("id").primaryKey().defaultRandom(),
     measuredAt: timestamp("measured_at", { withTimezone: true }).notNull(),

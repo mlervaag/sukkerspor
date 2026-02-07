@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { format, subDays, startOfDay, isAfter } from "date-fns";
 import { nb } from "date-fns/locale";
-import { GlucoseReading, ReadingInput } from "@/lib/domain/types";
-import { computeDashboardStats, computeMealBreakdown, computeDailyTrends } from "@/lib/domain/analytics";
+import { GlucoseReading, ReadingInput, InsulinDose } from "@/lib/domain/types";
+import { computeDashboardStats, computeMealBreakdown, computeDailyTrends, computeInsulinFastingCorrelation } from "@/lib/domain/analytics";
 import { TargetStatusCard } from "@/components/dashboard/target-status-card";
 import { OverTargetCountCard } from "@/components/dashboard/over-target-count-card";
 import { CoverageCard } from "@/components/dashboard/coverage-card";
@@ -21,6 +21,7 @@ import { WithinTargetCard } from "@/components/dashboard/within-target-card";
 import { HighLowStatsCard } from "@/components/dashboard/high-low-stats-card";
 import { DataQualityCard } from "@/components/dashboard/data-quality-card";
 import { GoalStatusCard } from "@/components/dashboard/goal-status-card";
+import { InsulinCorrelationCard } from "@/components/dashboard/insulin-correlation-card";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -45,6 +46,12 @@ export default function OverviewPage() {
         { revalidateOnFocus: true }
     );
 
+    const { data: insulinDoses } = useSWR<InsulinDose[]>(
+        `/api/insulin-doses?startDayKey=${startDayKey}&endDayKey=${endDayKey}`,
+        fetcher,
+        { revalidateOnFocus: true }
+    );
+
     // Filter for 7d subset
     const readings7d = readings?.filter(r =>
         isAfter(new Date(r.measuredAt), startOfDay(start7d))
@@ -53,6 +60,9 @@ export default function OverviewPage() {
     const stats = readings ? computeDashboardStats(readings, readings7d) : null;
     const mealStats = readings ? computeMealBreakdown(readings) : [];
     const trendStats = readings7d ? computeDailyTrends(readings7d) : { data: [], label: null };
+    const correlationStats = (readings && insulinDoses)
+        ? computeInsulinFastingCorrelation(insulinDoses, readings)
+        : null;
 
     const handleCreate = async (input: ReadingInput) => {
         const res = await fetch("/api/readings", {
@@ -168,6 +178,9 @@ export default function OverviewPage() {
 
                     {/* Meal Breakdown Widget (Full Width) */}
                     <MealBreakdownCard meals={mealStats} />
+
+                    {/* Insulin Correlation (Conditional) */}
+                    {correlationStats && <InsulinCorrelationCard correlation={correlationStats} />}
 
                     {/* Quality Warning (Conditional, low priority) */}
                     <DataQualityCard missingTypeCount={stats.qualityMissingTypeCount} />
