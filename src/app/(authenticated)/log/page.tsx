@@ -9,13 +9,15 @@ import { ReadingModal } from "@/components/log/reading-modal";
 import { InsulinDoseCard } from "@/components/log/insulin-dose-card";
 import { InsulinDoseModal } from "@/components/log/insulin-dose-modal";
 import { GlucoseReading, ReadingInput, InsulinDose, InsulinDoseInput } from "@/lib/domain/types";
-import { ChevronLeft, ChevronRight, Plus, Syringe } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Syringe, Filter } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type TimelineItem =
     | { type: "reading"; time: Date; data: GlucoseReading }
     | { type: "insulin"; time: Date; data: InsulinDose };
+
+type LogFilter = "fasting" | "postMeal" | "insulin";
 
 export default function LogPage() {
     const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -24,6 +26,7 @@ export default function LogPage() {
     const [selectedReading, setSelectedReading] = useState<GlucoseReading | null>(null);
     const [selectedDose, setSelectedDose] = useState<InsulinDose | null>(null);
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+    const [activeFilters, setActiveFilters] = useState<Set<LogFilter>>(new Set(["fasting", "postMeal", "insulin"]));
 
     const start = startOfWeek(currentWeek, { weekStartsOn: 1 });
     const end = endOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -118,6 +121,19 @@ export default function LogPage() {
         setIsModalOpen(true);
     };
 
+    const toggleFilter = (filter: LogFilter) => {
+        setActiveFilters((prev) => {
+            const next = new Set(prev);
+            if (next.has(filter)) {
+                // Don't allow deselecting all
+                if (next.size > 1) next.delete(filter);
+            } else {
+                next.add(filter);
+            }
+            return next;
+        });
+    };
+
     const openEditInsulin = (dose: InsulinDose) => {
         setSelectedDose(dose);
         setIsInsulinModalOpen(true);
@@ -156,11 +172,37 @@ export default function LogPage() {
                 </button>
             </div>
 
+            <div className="flex items-center gap-2">
+                <Filter size={14} className="text-muted-foreground shrink-0" />
+                {([
+                    { key: "fasting" as LogFilter, label: "Fastende", active: "bg-primary text-primary-foreground", inactive: "bg-muted text-muted-foreground" },
+                    { key: "postMeal" as LogFilter, label: "Etter m\u00e5ltid", active: "bg-primary text-primary-foreground", inactive: "bg-muted text-muted-foreground" },
+                    { key: "insulin" as LogFilter, label: "Insulin", active: "bg-violet-600 text-white", inactive: "bg-muted text-muted-foreground" },
+                ]).map(({ key, label, active, inactive }) => (
+                    <button
+                        key={key}
+                        onClick={() => toggleFilter(key)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${activeFilters.has(key) ? active : inactive + " opacity-50"}`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
             <div className="space-y-8">
                 {daysInWeek.map((day) => {
                     const dayKeyStr = format(day, "yyyy-MM-dd");
-                    const dayReadings = readings?.filter((r) => r.dayKey === dayKeyStr) || [];
-                    const dayDoses = insulinDoses?.filter((d) => d.dayKey === dayKeyStr) || [];
+                    const allDayReadings = readings?.filter((r) => r.dayKey === dayKeyStr) || [];
+                    const allDayDoses = insulinDoses?.filter((d) => d.dayKey === dayKeyStr) || [];
+
+                    // Apply filters
+                    const dayReadings = allDayReadings.filter((r) => {
+                        if (r.isFasting && activeFilters.has("fasting")) return true;
+                        if (r.isPostMeal && activeFilters.has("postMeal")) return true;
+                        if (!r.isFasting && !r.isPostMeal) return activeFilters.has("fasting") || activeFilters.has("postMeal");
+                        return false;
+                    });
+                    const dayDoses = activeFilters.has("insulin") ? allDayDoses : [];
                     const isToday = format(new Date(), "yyyy-MM-dd") === dayKeyStr;
 
                     // Merge into timeline sorted by time
@@ -170,6 +212,7 @@ export default function LogPage() {
                     ].sort((a, b) => a.time.getTime() - b.time.getTime());
 
                     const hasEntries = timeline.length > 0;
+                    const hasAnyData = allDayReadings.length > 0 || allDayDoses.length > 0;
 
                     // Day summary calculations
                     const lastReading = dayReadings.length > 0 ? dayReadings[dayReadings.length - 1] : null;
@@ -213,7 +256,7 @@ export default function LogPage() {
                                         </div>
                                     )}
                                 </div>
-                                {hasEntries && (
+                                {hasAnyData && (
                                     <div className="flex items-center gap-1">
                                         <button
                                             onClick={() => openAddInsulin(day)}
