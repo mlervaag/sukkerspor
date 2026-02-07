@@ -34,27 +34,35 @@ export async function getReportData(range: ReportRange, date: Date = new Date())
     }
 
     let readings;
-    let doses;
+    let doses: any[] = [];
     if (start && end) {
         readings = await db
             .select()
             .from(glucoseReadings)
             .where(between(glucoseReadings.measuredAt, start, end))
             .orderBy(asc(glucoseReadings.measuredAt));
-        doses = await db
-            .select()
-            .from(insulinDoses)
-            .where(between(insulinDoses.administeredAt, start, end))
-            .orderBy(asc(insulinDoses.administeredAt));
+        try {
+            doses = await db
+                .select()
+                .from(insulinDoses)
+                .where(between(insulinDoses.administeredAt, start, end))
+                .orderBy(asc(insulinDoses.administeredAt));
+        } catch {
+            // insulin_doses table may not exist yet
+        }
     } else {
         readings = await db
             .select()
             .from(glucoseReadings)
             .orderBy(asc(glucoseReadings.measuredAt));
-        doses = await db
-            .select()
-            .from(insulinDoses)
-            .orderBy(asc(insulinDoses.administeredAt));
+        try {
+            doses = await db
+                .select()
+                .from(insulinDoses)
+                .orderBy(asc(insulinDoses.administeredAt));
+        } catch {
+            // insulin_doses table may not exist yet
+        }
     }
 
     const typedReadings = readings as any as GlucoseReading[];
