@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-    title: "Blodsukker",
-    description: "Loggføring for svangerskapsdiabetes",
+    title: "Sukkerspor",
+    description: "Loggføring av blodsukker for svangerskapsdiabetes",
 };
 
 export const viewport: Viewport = {

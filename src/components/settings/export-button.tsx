@@ -20,7 +20,7 @@ export function ExportButton() {
             // Extract filename from header if possible, else fallback
             const disposition = res.headers.get("Content-Disposition");
             const filenameMatch = disposition?.match(/filename="(.+)"/);
-            const filename = filenameMatch ? filenameMatch[1] : "blodsukker_backup.json";
+            const filename = filenameMatch ? filenameMatch[1] : "sukkerspor_backup.json";
 
             a.download = filename;
             document.body.appendChild(a);

@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
         const data = await getReportData(range);
         const pdfBytes = await generatePDF(data, lang, options);
 
-        const filename = `blodsukker_rapport_${range}.pdf`;
+        const filename = `sukkerspor_rapport_${range}.pdf`;
 
         return new NextResponse(pdfBytes as any, {
             headers: {

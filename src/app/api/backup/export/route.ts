@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
     try {
         const backup = await exportBackup();
-        const filename = `blodsukker_backup_${new Date().toISOString().split("T")[0]}.json`;
+        const filename = `sukkerspor_backup_${new Date().toISOString().split("T")[0]}.json`;
 
         return new NextResponse(JSON.stringify(backup, null, 2), {
             headers: {
