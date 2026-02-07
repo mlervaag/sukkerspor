@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            count: backupData.readings.length
+            count: backupData.readings.length,
+            insulinDoseCount: backupData.insulin_doses?.length || 0,
         }, {
             headers: {
                 "Cache-Control": "no-store",

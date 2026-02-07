@@ -1,5 +1,5 @@
-import { GlucoseReading } from "./types";
-import { isSameDay, startOfDay } from "date-fns";
+import { GlucoseReading, InsulinDose } from "./types";
+import { isSameDay, startOfDay, addDays } from "date-fns";
 
 export interface DashboardStats {
     lastLoggedAt: Date | null;
@@ -261,4 +261,119 @@ export function computeDailyTrends(readings: GlucoseReading[]): {
     else if (diff < -0.3) label = "Synkende";
 
     return { data: smoothedData, label };
+}
+
+// --- Insulin-Fasting Correlation ---
+
+export interface InsulinFastingPair {
+    date: string;           // day_key of the evening dose (day N)
+    eveningDose: number;    // units administered
+    nextFasting: number | null;  // fasting value morning of day N+1
+}
+
+export type CorrelationTrend = "increasing_dose_needed" | "stable" | "decreasing_dose_possible" | "insufficient_data";
+
+export interface CorrelationResult {
+    pairs: InsulinFastingPair[];
+    completePairs: InsulinFastingPair[];  // only pairs where nextFasting is not null
+    trend: CorrelationTrend;
+    avgFastingByDoseRange: { doseRange: string; avgFasting: number; count: number }[];
+    suggestion: string | null;
+}
+
+export function computeInsulinFastingCorrelation(
+    doses: InsulinDose[],
+    readings: GlucoseReading[]
+): CorrelationResult {
+    // Filter to long-acting evening doses (administered at 20:00 or later)
+    const eveningDoses = doses.filter(d => {
+        if (d.insulinType !== "long_acting") return false;
+        const hour = new Date(d.administeredAt).getHours();
+        return hour >= 20;
+    });
+
+    // Build a map of day_key -> first fasting reading
+    const fastingByDay = new Map<string, number>();
+    for (const r of readings) {
+        if (!r.isFasting) continue;
+        if (!fastingByDay.has(r.dayKey)) {
+            fastingByDay.set(r.dayKey, parseFloat(r.valueMmolL));
+        }
+    }
+
+    // Pair each evening dose with next day's fasting
+    const pairs: InsulinFastingPair[] = eveningDoses.map(d => {
+        const doseDate = new Date(d.administeredAt);
+        const nextDayKey = formatDayKey(addDays(startOfDay(doseDate), 1));
+        return {
+            date: d.dayKey,
+            eveningDose: parseFloat(d.doseUnits),
+            nextFasting: fastingByDay.get(nextDayKey) ?? null,
+        };
+    });
+
+    // Sort by date
+    pairs.sort((a, b) => a.date.localeCompare(b.date));
+
+    const completePairs = pairs.filter(p => p.nextFasting !== null);
+
+    if (completePairs.length < 3) {
+        return {
+            pairs,
+            completePairs,
+            trend: "insufficient_data",
+            avgFastingByDoseRange: [],
+            suggestion: null,
+        };
+    }
+
+    // Group by dose ranges (2-unit buckets)
+    const doseGroups = new Map<string, number[]>();
+    for (const p of completePairs) {
+        const bucket = Math.floor(p.eveningDose / 2) * 2;
+        const label = `${bucket}-${bucket + 2}`;
+        const group = doseGroups.get(label) || [];
+        group.push(p.nextFasting!);
+        doseGroups.set(label, group);
+    }
+
+    const avgFastingByDoseRange = Array.from(doseGroups.entries())
+        .map(([doseRange, values]) => ({
+            doseRange,
+            avgFasting: values.reduce((s, v) => s + v, 0) / values.length,
+            count: values.length,
+        }))
+        .sort((a, b) => a.doseRange.localeCompare(b.doseRange));
+
+    // Trend: look at last 5 complete pairs
+    const recent = completePairs.slice(-5);
+    const recentFastingValues = recent.map(p => p.nextFasting!);
+    const allAboveTarget = recentFastingValues.every(v => v > THRESHOLDS.FASTING);
+    const allBelowLow = recentFastingValues.every(v => v < 4.5);
+
+    let trend: CorrelationTrend = "stable";
+    let suggestion: string | null = null;
+
+    if (allAboveTarget) {
+        trend = "increasing_dose_needed";
+        suggestion = `De siste ${recent.length} fastende verdiene (etter kveldsinsulin) har vært over ${THRESHOLDS.FASTING}. Diskuter eventuell dosejustering med lege eller jordmor.`;
+    } else if (allBelowLow) {
+        trend = "decreasing_dose_possible";
+        suggestion = `De siste ${recent.length} fastende verdiene har vært under 4.5. Kontakt behandler for vurdering av dosen.`;
+    }
+
+    return {
+        pairs,
+        completePairs,
+        trend,
+        avgFastingByDoseRange,
+        suggestion,
+    };
+}
+
+function formatDayKey(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
 }

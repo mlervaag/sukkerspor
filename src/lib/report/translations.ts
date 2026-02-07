@@ -22,7 +22,16 @@ export const TRANSLATIONS = {
             Middag: "Middag",
             Kvelds: "Kvelds",
             Mellommåltid: "Mellommåltid",
-        }
+        },
+        insulin_header: "Insulindoser",
+        insulin_table_timestamp: "Tidspunkt",
+        insulin_table_dose: "Dose",
+        insulin_table_type: "Type",
+        insulin_table_name: "Navn",
+        insulin_table_notes: "Notater",
+        insulin_type_long: "Langtidsvirkende",
+        insulin_type_rapid: "Hurtigvirkende",
+        insulin_total: "Antall insulindoser",
     },
     en: {
         title: "Blood Glucose Report",
@@ -47,7 +56,16 @@ export const TRANSLATIONS = {
             Middag: "Dinner",
             Kvelds: "Evening",
             Mellommåltid: "Snack",
-        }
+        },
+        insulin_header: "Insulin Doses",
+        insulin_table_timestamp: "Timestamp",
+        insulin_table_dose: "Dose",
+        insulin_table_type: "Type",
+        insulin_table_name: "Name",
+        insulin_table_notes: "Notes",
+        insulin_type_long: "Long-acting",
+        insulin_type_rapid: "Rapid-acting",
+        insulin_total: "Total insulin doses",
     }
 };
 

@@ -1,10 +1,11 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { format } from "date-fns";
 import { TRANSLATIONS, Language } from "./translations";
-import { GlucoseReading } from "../domain/types";
+import { GlucoseReading, InsulinDose } from "../domain/types";
 
 export async function generatePDF(data: {
     readings: GlucoseReading[];
+    insulinDoses?: InsulinDose[];
     stats: any;
     range: string;
     start: Date | null;
@@ -93,6 +94,72 @@ export async function generatePDF(data: {
             feeling
         ]);
         y -= rowHeight;
+    }
+
+    // Insulin Doses Section
+    const insulinDoses = data.insulinDoses || [];
+    if (insulinDoses.length > 0) {
+        // Add spacing / new page if needed
+        if (y < 120) {
+            page = pdfDoc.addPage([595.28, 841.89]);
+            y = height - 50;
+        } else {
+            y -= 20;
+        }
+
+        page.drawText((t as any).insulin_header || "Insulin Doses", { x: 50, y, size: 16, font: fontBold });
+        y -= 5;
+
+        page.drawText(`${(t as any).insulin_total || "Total"}: ${insulinDoses.length}`, { x: 50, y, size: 12, font });
+        y -= 25;
+
+        const drawInsulinRow = (p: any, py: number, cols: string[], isHeader = false) => {
+            const xOffsets = [50, 150, 210, 310, 410];
+            const currentFont = isHeader ? fontBold : font;
+            cols.forEach((txt, i) => {
+                p.drawText(txt || "", { x: xOffsets[i], y: py, size: 10, font: currentFont });
+            });
+        };
+
+        drawInsulinRow(page, y, [
+            (t as any).insulin_table_timestamp || "Timestamp",
+            (t as any).insulin_table_dose || "Dose",
+            (t as any).insulin_table_type || "Type",
+            (t as any).insulin_table_name || "Name",
+            (t as any).insulin_table_notes || "Notes",
+        ], true);
+        y -= rowHeight;
+        page.drawLine({ start: { x: 50, y: y + 15 }, end: { x: width - 50, y: y + 15 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+
+        for (const d of insulinDoses) {
+            if (y < 70) {
+                page = pdfDoc.addPage([595.28, 841.89]);
+                y = height - 50;
+                drawInsulinRow(page, y, [
+                    (t as any).insulin_table_timestamp || "Timestamp",
+                    (t as any).insulin_table_dose || "Dose",
+                    (t as any).insulin_table_type || "Type",
+                    (t as any).insulin_table_name || "Name",
+                    (t as any).insulin_table_notes || "Notes",
+                ], true);
+                y -= rowHeight;
+            }
+
+            const typeLabel = d.insulinType === "long_acting"
+                ? ((t as any).insulin_type_long || "Long-acting")
+                : ((t as any).insulin_type_rapid || "Rapid-acting");
+            const nameStr = d.insulinName || "";
+            const notesStr = d.notes ? d.notes.substring(0, 30) + (d.notes.length > 30 ? "..." : "") : "";
+
+            drawInsulinRow(page, y, [
+                format(new Date(d.administeredAt), "dd.MM HH:mm"),
+                `${d.doseUnits} E`,
+                typeLabel,
+                nameStr,
+                notesStr,
+            ]);
+            y -= rowHeight;
+        }
     }
 
     // Disclaimer

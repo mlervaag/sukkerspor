@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { eventLog } from "@/lib/db/schema";
 
 export type EventType = "create" | "update" | "delete" | "import" | "export" | "report" | "settings_change";
-export type EntityType = "glucose_reading" | "settings" | "backup";
+export type EntityType = "glucose_reading" | "insulin_dose" | "settings" | "backup";
 
 export async function logEvent(
     eventType: EventType,

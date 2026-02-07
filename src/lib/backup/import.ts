@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { glucoseReadings, userSettings } from "@/lib/db/schema";
+import { glucoseReadings, insulinDoses, userSettings } from "@/lib/db/schema";
 import { BackupData } from "./schema";
 import { logEvent } from "../domain/event-log";
 import { eq } from "drizzle-orm";
@@ -11,7 +11,8 @@ import { eq } from "drizzle-orm";
  */
 export async function importBackup(data: BackupData): Promise<void> {
     await db.transaction(async (tx) => {
-        // Clear existing readings
+        // Clear existing data
+        await tx.delete(insulinDoses);
         await tx.delete(glucoseReadings);
 
         // Insert readings from backup
@@ -57,8 +58,27 @@ export async function importBackup(data: BackupData): Promise<void> {
                 });
         }
 
+        // Insert insulin doses from backup (v2+)
+        if (data.insulin_doses && data.insulin_doses.length > 0) {
+            const dosesToInsert = data.insulin_doses.map((d: any) => ({
+                id: d.id,
+                administeredAt: new Date(d.administeredAt || d.administered_at),
+                dayKey: d.dayKey || d.day_key,
+                doseUnits: d.doseUnits || d.dose_units,
+                insulinType: d.insulinType || d.insulin_type,
+                insulinName: d.insulinName || d.insulin_name || null,
+                mealContext: d.mealContext || d.meal_context || null,
+                notes: d.notes || null,
+                createdAt: d.createdAt ? new Date(d.createdAt) : (d.created_at ? new Date(d.created_at) : undefined),
+                updatedAt: d.updatedAt ? new Date(d.updatedAt) : (d.updated_at ? new Date(d.updated_at) : undefined),
+            }));
+
+            await tx.insert(insulinDoses).values(dosesToInsert as any);
+        }
+
         await logEvent("import", "backup", undefined, {
-            count: data.readings.length,
+            readingCount: data.readings.length,
+            insulinDoseCount: data.insulin_doses?.length || 0,
             version: data.schema_version,
         });
     });

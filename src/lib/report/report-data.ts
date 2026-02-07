@@ -1,8 +1,8 @@
 import { db } from "@/lib/db";
-import { glucoseReadings } from "@/lib/db/schema";
+import { glucoseReadings, insulinDoses } from "@/lib/db/schema";
 import { between, asc } from "drizzle-orm";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns";
-import { GlucoseReading } from "../domain/types";
+import { GlucoseReading, InsulinDose } from "../domain/types";
 
 export type ReportRange = "week" | "month" | "all";
 
@@ -19,17 +19,27 @@ export async function getReportData(range: ReportRange, date: Date = new Date())
     }
 
     let readings;
+    let doses;
     if (start && end) {
         readings = await db
             .select()
             .from(glucoseReadings)
             .where(between(glucoseReadings.measuredAt, start, end))
             .orderBy(asc(glucoseReadings.measuredAt));
+        doses = await db
+            .select()
+            .from(insulinDoses)
+            .where(between(insulinDoses.administeredAt, start, end))
+            .orderBy(asc(insulinDoses.administeredAt));
     } else {
         readings = await db
             .select()
             .from(glucoseReadings)
             .orderBy(asc(glucoseReadings.measuredAt));
+        doses = await db
+            .select()
+            .from(insulinDoses)
+            .orderBy(asc(insulinDoses.administeredAt));
     }
 
     // Stats calculations
@@ -37,6 +47,7 @@ export async function getReportData(range: ReportRange, date: Date = new Date())
 
     return {
         readings: readings as any as GlucoseReading[],
+        insulinDoses: doses as any as InsulinDose[],
         stats,
         range,
         start,
