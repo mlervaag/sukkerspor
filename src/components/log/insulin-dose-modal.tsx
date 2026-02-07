@@ -45,18 +45,19 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
     }, [initialData, isOpen, selectedDate]);
 
     const resetForm = () => {
-        setDoseUnits("");
         setTime(format(new Date(), "HH:mm"));
         setInsulinType("long_acting");
-        // Restore last used insulin name from localStorage
-        if (typeof window !== "undefined") {
-            setInsulinName(localStorage.getItem("sukkerspor_insulin_name") || "");
-        } else {
-            setInsulinName("");
-        }
         setMealContext("");
         setNotes("");
         setError(null);
+        // Pre-fill from last used values in localStorage
+        if (typeof window !== "undefined") {
+            setDoseUnits(localStorage.getItem("sukkerspor_last_dose") || "");
+            setInsulinName(localStorage.getItem("sukkerspor_insulin_name") || "");
+        } else {
+            setDoseUnits("");
+            setInsulinName("");
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -93,9 +94,10 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
         setLoading(true);
 
         try {
-            // Save insulin name to localStorage for next time
-            if (insulinName && typeof window !== "undefined") {
-                localStorage.setItem("sukkerspor_insulin_name", insulinName);
+            // Save values to localStorage for next time
+            if (typeof window !== "undefined") {
+                if (insulinName) localStorage.setItem("sukkerspor_insulin_name", insulinName);
+                localStorage.setItem("sukkerspor_last_dose", numericDose.toFixed(1));
             }
 
             await onSubmit({
@@ -150,6 +152,7 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
                             setDoseUnits(e.target.value);
                             setError(null);
                         }}
+                        onFocus={(e) => e.target.select()}
                         className="input w-full text-2xl font-bold placeholder:text-muted-foreground/30"
                         placeholder="0"
                         required
@@ -208,6 +211,7 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
                         type="text"
                         value={insulinName}
                         onChange={(e) => setInsulinName(e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         className="input w-full"
                         placeholder="F.eks. Insulatard, NovoRapid..."
                     />
