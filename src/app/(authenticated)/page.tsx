@@ -14,6 +14,7 @@ import { MealBreakdownCard } from "@/components/dashboard/meal-breakdown-card";
 import { TrendSparklineCard } from "@/components/dashboard/trend-sparkline-card";
 import { QuickActionsCard } from "@/components/dashboard/quick-actions-card";
 import { ReadingModal } from "@/components/log/reading-modal";
+import { InsulinDoseModal } from "@/components/log/insulin-dose-modal";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { getOverviewQueryRange } from "@/lib/utils/query-params";
 import { LastReadingCard } from "@/components/dashboard/last-reading-card";
@@ -28,6 +29,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function OverviewPage() {
     const router = useRouter();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isInsulinModalOpen, setIsInsulinModalOpen] = useState(false);
     const [windowDays, setWindowDays] = useState<7 | 14>(14);
 
     // Stable anchor for SWR key - computed once on mount
@@ -46,7 +48,7 @@ export default function OverviewPage() {
         { revalidateOnFocus: true }
     );
 
-    const { data: insulinDoses } = useSWR<InsulinDose[]>(
+    const { data: insulinDoses, mutate: mutateInsulin } = useSWR<InsulinDose[]>(
         `/api/insulin-doses?startDayKey=${startDayKey}&endDayKey=${endDayKey}`,
         fetcher,
         { revalidateOnFocus: true }
@@ -75,6 +77,19 @@ export default function OverviewPage() {
             throw new Error(error.error || "Kunne ikke opprette måling");
         }
         mutate();
+    };
+
+    const handleCreateInsulin = async (input: import("@/lib/domain/types").InsulinDoseInput) => {
+        const res = await fetch("/api/insulin-doses", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(input),
+        });
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.error || "Kunne ikke lagre insulindose");
+        }
+        mutateInsulin();
     };
 
     return (
@@ -119,6 +134,7 @@ export default function OverviewPage() {
                         {/* 2. Quick Actions (Directly below Last Reading) */}
                         <QuickActionsCard
                             onAddReading={() => setIsModalOpen(true)}
+                            onAddInsulin={() => setIsInsulinModalOpen(true)}
                             onGenerateReport={() => router.push("/settings")}
                         />
 
@@ -218,6 +234,12 @@ export default function OverviewPage() {
                         onSubmit={handleCreate}
                         initialData={null}
                         selectedDate={null}
+                    />
+
+                    <InsulinDoseModal
+                        isOpen={isInsulinModalOpen}
+                        onClose={() => setIsInsulinModalOpen(false)}
+                        onSubmit={handleCreateInsulin}
                     />
 
                     {/* Footer Disclaimer */}
