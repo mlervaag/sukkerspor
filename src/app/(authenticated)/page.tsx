@@ -7,8 +7,6 @@ import { format, subDays, startOfDay, isAfter } from "date-fns";
 import { nb } from "date-fns/locale";
 import { GlucoseReading, ReadingInput, InsulinDose } from "@/lib/domain/types";
 import { computeDashboardStats, computeMealBreakdown, computeDailyTrends, computeInsulinFastingCorrelation } from "@/lib/domain/analytics";
-import { TargetStatusCard } from "@/components/dashboard/target-status-card";
-import { OverTargetCountCard } from "@/components/dashboard/over-target-count-card";
 import { CoverageCard } from "@/components/dashboard/coverage-card";
 import { MealBreakdownCard } from "@/components/dashboard/meal-breakdown-card";
 import { TrendSparklineCard } from "@/components/dashboard/trend-sparkline-card";
@@ -18,7 +16,6 @@ import { InsulinDoseModal } from "@/components/log/insulin-dose-modal";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { getOverviewQueryRange } from "@/lib/utils/query-params";
 import { LastReadingCard } from "@/components/dashboard/last-reading-card";
-import { WithinTargetCard } from "@/components/dashboard/within-target-card";
 import { HighLowStatsCard } from "@/components/dashboard/high-low-stats-card";
 import { DataQualityCard } from "@/components/dashboard/data-quality-card";
 import { GoalStatusCard } from "@/components/dashboard/goal-status-card";
@@ -35,12 +32,10 @@ export default function OverviewPage() {
     // Stable anchor for SWR key - computed once on mount
     const [{ startDayKey, endDayKey }] = useState(() => getOverviewQueryRange());
 
-    // We also need start7d for filtering - derive from the same anchor logic
-    // start14d is technically the date passed to queryDate (which is subDays 14)
-    // but for 7d filtering we want relative to "today"
+    // Rolling windows: "last 7 days" = today + 6 days back (7 calendar days)
     const [today] = useState(() => startOfDay(new Date()));
-    const start7d = subDays(today, 7);
-    const start14d = subDays(today, 14);
+    const start7d = subDays(today, 6);
+    const start14d = subDays(today, 13);
 
     const { data: readings, mutate } = useSWR<GlucoseReading[]>(
         `/api/readings?startDayKey=${startDayKey}&endDayKey=${endDayKey}`,
