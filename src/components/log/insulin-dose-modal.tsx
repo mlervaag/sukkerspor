@@ -30,6 +30,7 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
     const [notes, setNotes] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [canRetry, setCanRetry] = useState(false);
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const toast = useToast();
@@ -44,12 +45,14 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
             setMealContext(initialData.mealContext || "");
             setNotes(initialData.notes || "");
             setError(null);
+            setCanRetry(false);
         } else {
             setTime(format(new Date(), "HH:mm"));
             setInsulinType("long_acting");
             setMealContext("");
             setNotes("");
             setError(null);
+            setCanRetry(false);
             if (typeof window !== "undefined") {
                 setDoseUnits(localStorage.getItem("sukkerspor_last_dose") || "");
                 setInsulinName(localStorage.getItem("sukkerspor_insulin_name") || "");
@@ -60,9 +63,9 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
         }
     }, [initialData, isOpen, selectedDate]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const submit = async () => {
         setError(null);
+        setCanRetry(false);
 
         const dateToUse = initialData ? new Date(initialData.administeredAt) : (selectedDate || new Date());
         const dateStr = format(dateToUse, "yyyy-MM-dd");
@@ -109,10 +112,24 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
             });
             onClose();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Noe gikk galt ved lagring.");
+            const isNetworkError =
+                err instanceof TypeError ||
+                (err instanceof Error && /network|fetch|offline/i.test(err.message));
+            if (isNetworkError) {
+                setError("Kunne ikke kontakte serveren. Sjekk internett og prøv igjen.");
+                setCanRetry(true);
+            } else {
+                setError(err instanceof Error ? err.message : "Lagring feilet. Prøv igjen.");
+                setCanRetry(true);
+            }
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await submit();
     };
 
     const handleDelete = async () => {
@@ -162,8 +179,18 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
                 </div>
 
                 {error && (
-                    <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 text-sm border border-red-100 dark:border-red-900">
-                        {error}
+                    <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 text-sm border border-red-100 dark:border-red-900 space-y-2">
+                        <p>{error}</p>
+                        {canRetry && (
+                            <button
+                                type="button"
+                                onClick={() => submit()}
+                                disabled={loading}
+                                className="text-sm font-medium underline underline-offset-2 hover:no-underline disabled:opacity-60"
+                            >
+                                Prøv igjen
+                            </button>
+                        )}
                     </div>
                 )}
 

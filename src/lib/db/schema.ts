@@ -21,7 +21,6 @@ export const glucoseReadings = pgTable("glucose_readings", {
     isFasting: boolean("is_fasting").default(false).notNull(),
     isPostMeal: boolean("is_post_meal").default(false).notNull(),
     mealType: text("meal_type"), // breakfast, lunch, dinner, evening_meal, snack
-    partOfDay: text("part_of_day"), // morning, midday, afternoon, evening
     foodText: text("food_text"),
     feelingNotes: text("feeling_notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

@@ -25,11 +25,11 @@ export function ReadingModal({ isOpen, onClose, onSubmit, onDeleted, initialData
     const [isFasting, setIsFasting] = useState(false);
     const [isPostMeal, setIsPostMeal] = useState(false);
     const [mealType, setMealType] = useState("");
-    const [partOfDay, setPartOfDay] = useState("");
     const [foodText, setFoodText] = useState("");
     const [feelingNotes, setFeelingNotes] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [canRetry, setCanRetry] = useState(false);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -39,26 +39,26 @@ export function ReadingModal({ isOpen, onClose, onSubmit, onDeleted, initialData
             setIsFasting(initialData.isFasting);
             setIsPostMeal(initialData.isPostMeal);
             setMealType(initialData.mealType || "");
-            setPartOfDay(initialData.partOfDay || "");
             setFoodText(initialData.foodText || "");
             setFeelingNotes(initialData.feelingNotes || "");
             setError(null);
+            setCanRetry(false);
         } else {
             setValue("");
             setTime(format(new Date(), "HH:mm"));
             setIsFasting(false);
             setIsPostMeal(false);
             setMealType("");
-            setPartOfDay("");
             setFoodText("");
             setFeelingNotes("");
             setError(null);
+            setCanRetry(false);
         }
     }, [initialData, isOpen, selectedDate]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const submit = async () => {
         setError(null);
+        setCanRetry(false);
 
         const dateToUse = initialData ? new Date(initialData.measuredAt) : (selectedDate || new Date());
         const dateStr = format(dateToUse, "yyyy-MM-dd");
@@ -96,16 +96,29 @@ export function ReadingModal({ isOpen, onClose, onSubmit, onDeleted, initialData
                 isFasting,
                 isPostMeal,
                 mealType: mealType || null,
-                partOfDay: partOfDay || null,
                 foodText: foodText || null,
                 feelingNotes: feelingNotes || null,
             });
             onClose();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Noe gikk galt ved lagring.");
+            const isNetworkError =
+                err instanceof TypeError ||
+                (err instanceof Error && /network|fetch|offline/i.test(err.message));
+            if (isNetworkError) {
+                setError("Kunne ikke kontakte serveren. Sjekk internett og prøv igjen.");
+                setCanRetry(true);
+            } else {
+                setError(err instanceof Error ? err.message : "Lagring feilet. Prøv igjen.");
+                setCanRetry(true);
+            }
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await submit();
     };
 
     const activeDate = initialData ? new Date(initialData.measuredAt) : (selectedDate || new Date());
@@ -139,8 +152,18 @@ export function ReadingModal({ isOpen, onClose, onSubmit, onDeleted, initialData
                 </div>
 
                 {error && (
-                    <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 text-sm border border-red-100 dark:border-red-900">
-                        {error}
+                    <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 text-sm border border-red-100 dark:border-red-900 space-y-2">
+                        <p>{error}</p>
+                        {canRetry && (
+                            <button
+                                type="button"
+                                onClick={() => submit()}
+                                disabled={loading}
+                                className="text-sm font-medium underline underline-offset-2 hover:no-underline disabled:opacity-60"
+                            >
+                                Prøv igjen
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -158,33 +181,38 @@ export function ReadingModal({ isOpen, onClose, onSubmit, onDeleted, initialData
                     />
                 </div>
 
-                <div className="flex gap-4" role="radiogroup" aria-label="Målingstype">
-                    <button
-                        type="button"
-                        role="radio"
-                        aria-checked={isFasting}
-                        onClick={() => {
-                            const next = !isFasting;
-                            setIsFasting(next);
-                            if (next) setIsPostMeal(false);
-                        }}
-                        className={`flex-1 py-3 rounded-xl border-2 transition-all font-medium ${isFasting ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground"}`}
-                    >
-                        Fastende
-                    </button>
-                    <button
-                        type="button"
-                        role="radio"
-                        aria-checked={isPostMeal}
-                        onClick={() => {
-                            const next = !isPostMeal;
-                            setIsPostMeal(next);
-                            if (next) setIsFasting(false);
-                        }}
-                        className={`flex-1 py-3 rounded-xl border-2 transition-all font-medium ${isPostMeal ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground"}`}
-                    >
-                        Etter måltid
-                    </button>
+                <div className="space-y-2">
+                    <div className="flex gap-4" role="radiogroup" aria-label="Målingstype">
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked={isFasting}
+                            onClick={() => {
+                                const next = !isFasting;
+                                setIsFasting(next);
+                                if (next) setIsPostMeal(false);
+                            }}
+                            className={`flex-1 py-3 rounded-xl border-2 transition-all font-medium ${isFasting ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground"}`}
+                        >
+                            Fastende
+                        </button>
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked={isPostMeal}
+                            onClick={() => {
+                                const next = !isPostMeal;
+                                setIsPostMeal(next);
+                                if (next) setIsFasting(false);
+                            }}
+                            className={`flex-1 py-3 rounded-xl border-2 transition-all font-medium ${isPostMeal ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground"}`}
+                        >
+                            Etter måltid
+                        </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                        <strong className="font-semibold">Fastende</strong> = før frokost, minst 8 timer uten mat. <strong className="font-semibold">Etter måltid</strong> = ca. 1,5 time etter at du begynte å spise.
+                    </p>
                 </div>
 
                 {isPostMeal && (

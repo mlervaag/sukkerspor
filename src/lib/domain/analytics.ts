@@ -1,6 +1,6 @@
 import { GlucoseReading, InsulinDose } from "./types";
 import { isSameDay, startOfDay, addDays } from "date-fns";
-import { computeDayKey } from "../utils/day-key";
+import { computeDayKey, getOsloHour } from "../utils/day-key";
 
 export interface DashboardStats {
     lastLoggedAt: Date | null;
@@ -267,8 +267,7 @@ export function computeInsulinFastingCorrelation(
 ): CorrelationResult {
     const eveningDoses = doses.filter(d => {
         if (d.insulinType !== "long_acting") return false;
-        const hour = new Date(d.administeredAt).getHours();
-        return hour >= 20;
+        return getOsloHour(new Date(d.administeredAt)) >= 20;
     });
 
     const fastingByDay = new Map<string, number>();

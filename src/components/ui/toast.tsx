@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 
@@ -21,24 +21,35 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-let nextId = 1;
-
 export function ToastProvider({ children }: { children: React.ReactNode }) {
     const [toasts, setToasts] = useState<Toast[]>([]);
     const [mounted, setMounted] = useState(false);
+    const timeoutsRef = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+    const nextIdRef = useRef(1);
 
     useEffect(() => {
         setMounted(true);
+        const timeouts = timeoutsRef.current;
+        return () => {
+            timeouts.forEach((t) => clearTimeout(t));
+            timeouts.clear();
+        };
     }, []);
 
     const dismiss = useCallback((id: number) => {
+        const handle = timeoutsRef.current.get(id);
+        if (handle) {
+            clearTimeout(handle);
+            timeoutsRef.current.delete(id);
+        }
         setToasts((prev) => prev.filter((t) => t.id !== id));
     }, []);
 
     const show = useCallback((message: string, variant: ToastVariant = "info") => {
-        const id = nextId++;
+        const id = nextIdRef.current++;
         setToasts((prev) => [...prev, { id, message, variant }]);
-        setTimeout(() => dismiss(id), 4000);
+        const handle = setTimeout(() => dismiss(id), 4000);
+        timeoutsRef.current.set(id, handle);
     }, [dismiss]);
 
     const value: ToastContextValue = {
@@ -55,7 +66,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 <div
                     aria-live="polite"
                     aria-atomic="true"
-                    className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-2 w-[calc(100%-2rem)] max-w-sm pointer-events-none"
+                    style={{ top: "max(1rem, env(safe-area-inset-top))" }}
+                    className="fixed left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-2 w-[calc(100%-2rem)] max-w-sm pointer-events-none"
                 >
                     {toasts.map((t) => (
                         <ToastItem key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />

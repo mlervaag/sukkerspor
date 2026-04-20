@@ -1,5 +1,13 @@
 import { BackupData } from "./schema";
 
+function isValidDate(value: unknown): boolean {
+    if (!value) return false;
+    if (value instanceof Date) return !isNaN(value.getTime());
+    if (typeof value !== "string" && typeof value !== "number") return false;
+    const d = new Date(value);
+    return !isNaN(d.getTime());
+}
+
 export function validateBackup(data: unknown): BackupData {
     if (!data || typeof data !== "object") {
         throw new Error("Invalid backup format: Not an object");
@@ -19,11 +27,14 @@ export function validateBackup(data: unknown): BackupData {
     for (const item of obj.readings) {
         const r = item as Record<string, unknown>;
         const id = r.id;
-        const measuredAt = r.measuredAt || r.measured_at;
+        const measuredAt = r.measuredAt ?? r.measured_at;
         const valueMmolL = r.valueMmolL ?? r.value_mmol_l;
 
-        if (!id || !measuredAt || (typeof valueMmolL !== "number" && typeof valueMmolL !== "string")) {
+        if (!id || (typeof valueMmolL !== "number" && typeof valueMmolL !== "string")) {
             throw new Error(`Invalid reading data in backup: ${JSON.stringify(item)}`);
+        }
+        if (!isValidDate(measuredAt)) {
+            throw new Error(`Invalid reading data in backup: missing or invalid measuredAt (${JSON.stringify(item)})`);
         }
     }
 
@@ -34,11 +45,14 @@ export function validateBackup(data: unknown): BackupData {
         for (const item of obj.insulin_doses) {
             const d = item as Record<string, unknown>;
             const id = d.id;
-            const administeredAt = d.administeredAt || d.administered_at;
+            const administeredAt = d.administeredAt ?? d.administered_at;
             const doseUnits = d.doseUnits ?? d.dose_units;
 
-            if (!id || !administeredAt || (typeof doseUnits !== "number" && typeof doseUnits !== "string")) {
+            if (!id || (typeof doseUnits !== "number" && typeof doseUnits !== "string")) {
                 throw new Error(`Invalid insulin dose data in backup: ${JSON.stringify(item)}`);
+            }
+            if (!isValidDate(administeredAt)) {
+                throw new Error(`Invalid insulin dose data in backup: missing or invalid administeredAt (${JSON.stringify(item)})`);
             }
         }
     }

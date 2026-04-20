@@ -60,6 +60,52 @@ describe("validateBackup", () => {
         expect(() => validateBackup(backup)).toThrow("Invalid reading data");
     });
 
+    it("rejects a reading missing measuredAt when other fields are present", () => {
+        const backup = {
+            schema_version: 1,
+            readings: [
+                {
+                    id: "abc-123",
+                    valueMmolL: "5.5",
+                    // no measuredAt
+                },
+            ],
+        };
+
+        expect(() => validateBackup(backup)).toThrow(/measuredAt/);
+    });
+
+    it("rejects a reading with an unparseable measuredAt", () => {
+        const backup = {
+            schema_version: 1,
+            readings: [
+                {
+                    id: "abc-123",
+                    measuredAt: "not-a-date",
+                    valueMmolL: "5.5",
+                },
+            ],
+        };
+
+        expect(() => validateBackup(backup)).toThrow(/measuredAt/);
+    });
+
+    it("rejects an insulin dose with invalid administeredAt", () => {
+        const backup = {
+            schema_version: 2,
+            readings: [],
+            insulin_doses: [
+                {
+                    id: "dose-1",
+                    doseUnits: "14.0",
+                    administeredAt: "garbage",
+                },
+            ],
+        };
+
+        expect(() => validateBackup(backup)).toThrow(/administeredAt/);
+    });
+
     it("rejects unsupported schema version", () => {
         const backup = {
             schema_version: 999,

@@ -215,7 +215,7 @@ export default function LogPage() {
                             key={key}
                             onClick={() => toggleFilter(key)}
                             aria-pressed={isActive}
-                            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${isActive ? active : "bg-muted text-muted-foreground opacity-60"}`}
+                            className={`px-3.5 py-2 min-h-[36px] rounded-full text-sm font-medium transition-all ${isActive ? active : "bg-muted text-muted-foreground opacity-60"}`}
                         >
                             {label}
                         </button>

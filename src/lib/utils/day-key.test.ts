@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeDayKey } from "./day-key";
+import { computeDayKey, getOsloHour } from "./day-key";
 
 describe("computeDayKey", () => {
     it("should return the same day key regardless of DST (Spring forward 2026)", () => {
@@ -38,5 +38,21 @@ describe("computeDayKey", () => {
         // Wait, let's re-verify the midnight logic.
         // 2026-01-16T00:00:01 Oslo time is 2026-01-15T23:00:01 UTC.
         // So computeDayKey(new Date("2026-01-15T23:00:01Z")) should be "2026-01-16".
+    });
+});
+
+describe("getOsloHour", () => {
+    it("returns 21 for a summer dose at 21:30 Oslo (CEST = UTC+2)", () => {
+        // 21:30 CEST = 19:30 UTC
+        expect(getOsloHour(new Date("2026-07-01T19:30:00Z"))).toBe(21);
+    });
+
+    it("returns 21 for a winter dose at 21:30 Oslo (CET = UTC+1)", () => {
+        // 21:30 CET = 20:30 UTC
+        expect(getOsloHour(new Date("2026-01-01T20:30:00Z"))).toBe(21);
+    });
+
+    it("returns 19 for a 19:30 Oslo dose (below evening threshold)", () => {
+        expect(getOsloHour(new Date("2026-07-01T17:30:00Z"))).toBe(19);
     });
 });

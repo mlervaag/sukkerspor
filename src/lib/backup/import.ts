@@ -13,6 +13,14 @@ function pickDate(a: unknown, b: unknown): Date | undefined {
     return isNaN(d.getTime()) ? undefined : d;
 }
 
+function requireDate(a: unknown, b: unknown, label: string): Date {
+    const d = pickDate(a, b);
+    if (!d) {
+        throw new Error(`Backup import: ${label} is missing or invalid`);
+    }
+    return d;
+}
+
 function pickString(...values: unknown[]): string | null {
     for (const v of values) {
         if (typeof v === "string" && v !== "") return v;
@@ -32,17 +40,16 @@ export async function importBackup(data: BackupData): Promise<void> {
 
         if (data.readings.length > 0) {
             const valuesToInsert = (data.readings as RawBackupReading[]).map((r) => {
-                const measuredAt = pickDate(r.measuredAt, r.measured_at);
+                const measuredAt = requireDate(r.measuredAt, r.measured_at, "reading.measuredAt");
                 const valueMmolL = (r.valueMmolL ?? r.value_mmol_l) as string | number;
                 return {
                     id: r.id as string,
-                    measuredAt: measuredAt ?? new Date(),
+                    measuredAt,
                     dayKey: (r.dayKey ?? r.day_key) as string,
                     valueMmolL: typeof valueMmolL === "number" ? valueMmolL.toString() : valueMmolL,
                     isFasting: Boolean(r.isFasting ?? r.is_fasting),
                     isPostMeal: Boolean(r.isPostMeal ?? r.is_post_meal),
                     mealType: pickString(r.mealType, r.meal_type),
-                    partOfDay: pickString(r.partOfDay, r.part_of_day),
                     foodText: pickString(r.foodText, r.food_text),
                     feelingNotes: pickString(r.feelingNotes, r.feeling_notes),
                     createdAt: pickDate(r.createdAt, r.created_at),
@@ -69,11 +76,11 @@ export async function importBackup(data: BackupData): Promise<void> {
 
         if (data.insulin_doses && data.insulin_doses.length > 0) {
             const dosesToInsert = (data.insulin_doses as RawBackupDose[]).map((d) => {
-                const administeredAt = pickDate(d.administeredAt, d.administered_at);
+                const administeredAt = requireDate(d.administeredAt, d.administered_at, "insulin_dose.administeredAt");
                 const doseUnits = (d.doseUnits ?? d.dose_units) as string | number;
                 return {
                     id: d.id as string,
-                    administeredAt: administeredAt ?? new Date(),
+                    administeredAt,
                     dayKey: (d.dayKey ?? d.day_key) as string,
                     doseUnits: typeof doseUnits === "number" ? doseUnits.toString() : doseUnits,
                     insulinType: (d.insulinType ?? d.insulin_type) as string,
