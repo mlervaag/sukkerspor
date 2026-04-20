@@ -3,26 +3,32 @@ import { drizzle, NeonDatabase } from "drizzle-orm/neon-serverless";
 
 import * as schema from "./schema";
 
-let _pool: Pool | null = null;
-let _db: NeonDatabase<typeof schema> | null = null;
+type Schema = typeof schema;
+type Db = NeonDatabase<Schema>;
 
-function getPool() {
+let _pool: Pool | null = null;
+let _db: Db | null = null;
+
+function getPool(): Pool {
     if (!_pool) {
         _pool = new Pool({ connectionString: process.env.DATABASE_URL! });
     }
     return _pool;
 }
 
-export function getDb() {
+export function getDb(): Db {
     if (!_db) {
         _db = drizzle(getPool(), { schema });
     }
     return _db;
 }
 
-// For backwards compatibility with existing imports
-export const db = new Proxy({} as NeonDatabase<typeof schema>, {
-    get(_, prop) {
-        return (getDb() as any)[prop];
+// Lazy-initialized proxy so that importing `db` at module load time
+// (e.g. during Next.js build) doesn't require DATABASE_URL.
+export const db = new Proxy({} as Db, {
+    get(_target, prop: keyof Db) {
+        const target = getDb();
+        const value = target[prop];
+        return typeof value === "function" ? value.bind(target) : value;
     },
 });

@@ -84,11 +84,12 @@ export async function generatePDF(
     page.drawText(t.title, { x: 50, y, size: 22, font: fontBold });
     y -= 25;
 
+    const rangeKey = `range_${data.range}` as keyof typeof t;
     const rangeText = data.start && data.end
         ? `${format(data.start, "dd.MM.yyyy")} – ${format(data.end, "dd.MM.yyyy")}`
-        : (t as any)[`range_${data.range}`] || data.range;
+        : (t[rangeKey] as string | undefined) || data.range;
 
-    page.drawText(rangeText as string, { x: 50, y, size: 11, font, color: COLOR_GRAY });
+    page.drawText(rangeText, { x: 50, y, size: 11, font, color: COLOR_GRAY });
     y -= 10;
 
     // Reference thresholds line
@@ -272,7 +273,10 @@ export async function generatePDF(
             let colIdx = 3;
             if (options.includeMealInfo) {
                 const mealParts: string[] = [];
-                if (r.mealType) mealParts.push((t.meal_types as any)[r.mealType] || r.mealType);
+                if (r.mealType) {
+                    const localized = (t.meal_types as Record<string, string>)[r.mealType];
+                    mealParts.push(localized || r.mealType);
+                }
                 if (r.foodText) {
                     const truncated = r.foodText.length > 25 ? r.foodText.substring(0, 25) + "..." : r.foodText;
                     mealParts.push(truncated);

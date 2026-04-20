@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { format, startOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfWeek } from "date-fns";
+import { format, startOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfWeek, isSameDay } from "date-fns";
 import { nb } from "date-fns/locale";
 import { ReadingCard } from "@/components/log/reading-card";
 import { ReadingModal } from "@/components/log/reading-modal";
@@ -10,6 +10,8 @@ import { InsulinDoseCard } from "@/components/log/insulin-dose-card";
 import { InsulinDoseModal } from "@/components/log/insulin-dose-modal";
 import { GlucoseReading, ReadingInput, InsulinDose, InsulinDoseInput } from "@/lib/domain/types";
 import { ChevronLeft, ChevronRight, Plus, Syringe, Filter } from "lucide-react";
+import { THRESHOLDS } from "@/lib/domain/analytics";
+import { useToast } from "@/components/ui/toast";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -19,6 +21,12 @@ type TimelineItem =
 
 type LogFilter = "fasting" | "postMeal" | "insulin";
 
+const FILTERS: { key: LogFilter; label: string; active: string }[] = [
+    { key: "fasting", label: "Fastende", active: "bg-primary text-primary-foreground" },
+    { key: "postMeal", label: "Etter måltid", active: "bg-primary text-primary-foreground" },
+    { key: "insulin", label: "Insulin", active: "bg-violet-600 text-white" },
+];
+
 export default function LogPage() {
     const [currentWeek, setCurrentWeek] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,15 +35,16 @@ export default function LogPage() {
     const [selectedDose, setSelectedDose] = useState<InsulinDose | null>(null);
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
     const [activeFilters, setActiveFilters] = useState<Set<LogFilter>>(new Set(["fasting", "postMeal", "insulin"]));
+    const toast = useToast();
 
-    const start = startOfWeek(currentWeek, { weekStartsOn: 1 });
-    const end = endOfWeek(currentWeek, { weekStartsOn: 1 });
+    const start = useMemo(() => startOfWeek(currentWeek, { weekStartsOn: 1 }), [currentWeek]);
+    const end = useMemo(() => endOfWeek(currentWeek, { weekStartsOn: 1 }), [currentWeek]);
 
     const weekStartDayKey = format(start, "yyyy-MM-dd");
     const weekEndDayKey = format(end, "yyyy-MM-dd");
 
     const { data: readings, mutate: mutateReadings } = useSWR<GlucoseReading[]>(
-        `/api/readings?weekStartDayKey=${weekStartDayKey}`,
+        `/api/readings?startDayKey=${weekStartDayKey}&endDayKey=${weekEndDayKey}`,
         fetcher,
         { revalidateOnFocus: true }
     );
@@ -46,9 +55,28 @@ export default function LogPage() {
         { revalidateOnFocus: true }
     );
 
-    const daysInWeek = eachDayOfInterval({ start, end });
+    const daysInWeek = useMemo(() => eachDayOfInterval({ start, end }), [start, end]);
 
-    // Reading handlers
+    const readingsByDay = useMemo(() => {
+        const map = new Map<string, GlucoseReading[]>();
+        readings?.forEach((r) => {
+            const arr = map.get(r.dayKey) ?? [];
+            arr.push(r);
+            map.set(r.dayKey, arr);
+        });
+        return map;
+    }, [readings]);
+
+    const dosesByDay = useMemo(() => {
+        const map = new Map<string, InsulinDose[]>();
+        insulinDoses?.forEach((d) => {
+            const arr = map.get(d.dayKey) ?? [];
+            arr.push(d);
+            map.set(d.dayKey, arr);
+        });
+        return map;
+    }, [insulinDoses]);
+
     const handleCreateReading = async (input: ReadingInput) => {
         const res = await fetch("/api/readings", {
             method: "POST",
@@ -56,10 +84,11 @@ export default function LogPage() {
             body: JSON.stringify(input),
         });
         if (!res.ok) {
-            const error = await res.json();
+            const error = await res.json().catch(() => ({}));
             throw new Error(error.error || "Kunne ikke opprette måling");
         }
-        mutateReadings();
+        await mutateReadings();
+        toast.success("Måling registrert");
     };
 
     const handleUpdateReading = async (input: ReadingInput) => {
@@ -70,13 +99,13 @@ export default function LogPage() {
             body: JSON.stringify(input),
         });
         if (!res.ok) {
-            const error = await res.json();
+            const error = await res.json().catch(() => ({}));
             throw new Error(error.error || "Kunne ikke oppdatere måling");
         }
-        mutateReadings();
+        await mutateReadings();
+        toast.success("Måling oppdatert");
     };
 
-    // Insulin handlers
     const handleCreateInsulin = async (input: InsulinDoseInput) => {
         const res = await fetch("/api/insulin-doses", {
             method: "POST",
@@ -84,10 +113,11 @@ export default function LogPage() {
             body: JSON.stringify(input),
         });
         if (!res.ok) {
-            const error = await res.json();
+            const error = await res.json().catch(() => ({}));
             throw new Error(error.error || "Kunne ikke opprette insulindose");
         }
-        mutateInsulin();
+        await mutateInsulin();
+        toast.success("Insulindose lagret");
     };
 
     const handleUpdateInsulin = async (input: InsulinDoseInput) => {
@@ -98,16 +128,17 @@ export default function LogPage() {
             body: JSON.stringify(input),
         });
         if (!res.ok) {
-            const error = await res.json();
+            const error = await res.json().catch(() => ({}));
             throw new Error(error.error || "Kunne ikke oppdatere insulindose");
         }
-        mutateInsulin();
+        await mutateInsulin();
+        toast.success("Insulindose oppdatert");
     };
 
     const handleDeleteInsulin = async (id: string) => {
         const res = await fetch(`/api/insulin-doses/${id}`, { method: "DELETE" });
         if (!res.ok) throw new Error("Kunne ikke slette insulindose");
-        mutateInsulin();
+        await mutateInsulin();
     };
 
     const openEditReading = (reading: GlucoseReading) => {
@@ -125,7 +156,6 @@ export default function LogPage() {
         setActiveFilters((prev) => {
             const next = new Set(prev);
             if (next.has(filter)) {
-                // Don't allow deselecting all
                 if (next.size > 1) next.delete(filter);
             } else {
                 next.add(filter);
@@ -145,8 +175,10 @@ export default function LogPage() {
         setIsInsulinModalOpen(true);
     };
 
+    const weekHasAnyEntries = (readings?.length ?? 0) + (insulinDoses?.length ?? 0) > 0;
+
     return (
-        <div className="space-y-6 pb-20">
+        <div className="space-y-6 pb-4">
             <header className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-primary">Logg</h1>
@@ -158,6 +190,7 @@ export default function LogPage() {
                 <button
                     onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
                     className="p-2 text-muted-foreground hover:text-primary transition-colors"
+                    aria-label="Forrige uke"
                 >
                     <ChevronLeft size={24} />
                 </button>
@@ -167,35 +200,42 @@ export default function LogPage() {
                 <button
                     onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
                     className="p-2 text-muted-foreground hover:text-primary transition-colors"
+                    aria-label="Neste uke"
                 >
                     <ChevronRight size={24} />
                 </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" role="group" aria-label="Filter">
                 <Filter size={14} className="text-muted-foreground shrink-0" />
-                {([
-                    { key: "fasting" as LogFilter, label: "Fastende", active: "bg-primary text-primary-foreground", inactive: "bg-muted text-muted-foreground" },
-                    { key: "postMeal" as LogFilter, label: "Etter m\u00e5ltid", active: "bg-primary text-primary-foreground", inactive: "bg-muted text-muted-foreground" },
-                    { key: "insulin" as LogFilter, label: "Insulin", active: "bg-violet-600 text-white", inactive: "bg-muted text-muted-foreground" },
-                ]).map(({ key, label, active, inactive }) => (
-                    <button
-                        key={key}
-                        onClick={() => toggleFilter(key)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${activeFilters.has(key) ? active : inactive + " opacity-50"}`}
-                    >
-                        {label}
-                    </button>
-                ))}
+                {FILTERS.map(({ key, label, active }) => {
+                    const isActive = activeFilters.has(key);
+                    return (
+                        <button
+                            key={key}
+                            onClick={() => toggleFilter(key)}
+                            aria-pressed={isActive}
+                            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${isActive ? active : "bg-muted text-muted-foreground opacity-60"}`}
+                        >
+                            {label}
+                        </button>
+                    );
+                })}
             </div>
+
+            {!weekHasAnyEntries && readings && insulinDoses && (
+                <div className="card text-center py-8 space-y-3 bg-muted/20">
+                    <p className="text-sm font-medium">Ingen oppføringer denne uken</p>
+                    <p className="text-xs text-muted-foreground">Legg til målinger eller insulindoser nedenfor.</p>
+                </div>
+            )}
 
             <div className="space-y-8">
                 {daysInWeek.map((day) => {
                     const dayKeyStr = format(day, "yyyy-MM-dd");
-                    const allDayReadings = readings?.filter((r) => r.dayKey === dayKeyStr) || [];
-                    const allDayDoses = insulinDoses?.filter((d) => d.dayKey === dayKeyStr) || [];
+                    const allDayReadings = readingsByDay.get(dayKeyStr) ?? [];
+                    const allDayDoses = dosesByDay.get(dayKeyStr) ?? [];
 
-                    // Apply filters
                     const dayReadings = allDayReadings.filter((r) => {
                         if (r.isFasting && activeFilters.has("fasting")) return true;
                         if (r.isPostMeal && activeFilters.has("postMeal")) return true;
@@ -203,9 +243,8 @@ export default function LogPage() {
                         return false;
                     });
                     const dayDoses = activeFilters.has("insulin") ? allDayDoses : [];
-                    const isToday = format(new Date(), "yyyy-MM-dd") === dayKeyStr;
+                    const isToday = isSameDay(day, new Date());
 
-                    // Merge into timeline sorted by time
                     const timeline: TimelineItem[] = [
                         ...dayReadings.map((r) => ({ type: "reading" as const, time: new Date(r.measuredAt), data: r })),
                         ...dayDoses.map((d) => ({ type: "insulin" as const, time: new Date(d.administeredAt), data: d })),
@@ -214,22 +253,21 @@ export default function LogPage() {
                     const hasEntries = timeline.length > 0;
                     const hasAnyData = allDayReadings.length > 0 || allDayDoses.length > 0;
 
-                    // Day summary calculations
                     const lastReading = dayReadings.length > 0 ? dayReadings[dayReadings.length - 1] : null;
                     const hasHighReading = dayReadings.some((r) => {
                         const val = parseFloat(r.valueMmolL);
-                        if (r.isFasting) return val > 5.3;
-                        if (r.isPostMeal) return val > 6.7;
+                        if (r.isFasting) return val > THRESHOLDS.FASTING;
+                        if (r.isPostMeal) return val > THRESHOLDS.POST_MEAL;
                         return false;
                     });
 
                     return (
                         <section key={dayKeyStr} className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <div>
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
                                     <h2 className={`text-sm font-bold uppercase tracking-widest ${isToday ? "text-primary" : "text-muted-foreground"}`}>
                                         {format(day, "eeee d. MMMM", { locale: nb })}
-                                        {isToday && <span className="ml-2 text-[10px] bg-primary/10 px-2 py-0.5 rounded-full">IDAG</span>}
+                                        {isToday && <span className="ml-2 text-[10px] bg-primary/10 px-2 py-0.5 rounded-full">I DAG</span>}
                                     </h2>
                                     {hasEntries && (
                                         <div className="flex flex-wrap items-center gap-2 mt-1.5">
@@ -249,7 +287,7 @@ export default function LogPage() {
                                                 </span>
                                             )}
                                             {hasHighReading && (
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-600 border border-amber-100">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800">
                                                     Over referanse
                                                 </span>
                                             )}
@@ -257,18 +295,18 @@ export default function LogPage() {
                                     )}
                                 </div>
                                 {hasAnyData && (
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-1 shrink-0">
                                         <button
                                             onClick={() => openAddInsulin(day)}
                                             className="p-1 text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-colors"
-                                            title="Legg til insulin"
+                                            aria-label={`Legg til insulin for ${format(day, "d. MMMM", { locale: nb })}`}
                                         >
                                             <Syringe size={18} />
                                         </button>
                                         <button
                                             onClick={() => openAddReading(day)}
                                             className="p-1 text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                                            title="Legg til måling"
+                                            aria-label={`Legg til måling for ${format(day, "d. MMMM", { locale: nb })}`}
                                         >
                                             <Plus size={20} />
                                         </button>
@@ -282,14 +320,14 @@ export default function LogPage() {
                                         item.type === "reading" ? (
                                             <ReadingCard
                                                 key={item.data.id}
-                                                reading={item.data as GlucoseReading}
-                                                onClick={() => openEditReading(item.data as GlucoseReading)}
+                                                reading={item.data}
+                                                onClick={() => openEditReading(item.data)}
                                             />
                                         ) : (
                                             <InsulinDoseCard
                                                 key={item.data.id}
-                                                dose={item.data as InsulinDose}
-                                                onClick={() => openEditInsulin(item.data as InsulinDose)}
+                                                dose={item.data}
+                                                onClick={() => openEditInsulin(item.data)}
                                             />
                                         )
                                     )
@@ -325,6 +363,7 @@ export default function LogPage() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={selectedReading ? handleUpdateReading : handleCreateReading}
+                onDeleted={() => mutateReadings()}
                 initialData={selectedReading}
                 selectedDate={selectedDay}
             />

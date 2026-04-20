@@ -44,7 +44,8 @@ export async function GET(req: NextRequest) {
 
         const filename = `sukkerspor_rapport_${range}.pdf`;
 
-        return new NextResponse(pdfBytes as any, {
+        const body = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
+        return new NextResponse(body, {
             headers: {
                 "Content-Type": "application/pdf",
                 "Content-Disposition": `attachment; filename="${filename}"`,

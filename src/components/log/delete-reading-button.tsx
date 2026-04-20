@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { ConfirmDialog } from "../ui/confirm-dialog";
+import { useToast } from "../ui/toast";
 
 interface DeleteReadingButtonProps {
     readingId: string;
@@ -12,6 +13,7 @@ interface DeleteReadingButtonProps {
 export function DeleteReadingButton({ readingId, onDeleted }: DeleteReadingButtonProps) {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const toast = useToast();
 
     async function handleDelete() {
         setLoading(true);
@@ -22,11 +24,12 @@ export function DeleteReadingButton({ readingId, onDeleted }: DeleteReadingButto
 
             if (!res.ok) throw new Error("Delete failed");
 
-            onDeleted();
             setIsConfirmOpen(false);
+            toast.success("Måling slettet");
+            onDeleted();
         } catch (err) {
             console.error(err);
-            alert("Kunne ikke slette målingen.");
+            toast.error("Kunne ikke slette målingen");
         } finally {
             setLoading(false);
         }
@@ -37,7 +40,7 @@ export function DeleteReadingButton({ readingId, onDeleted }: DeleteReadingButto
             <button
                 type="button"
                 onClick={() => setIsConfirmOpen(true)}
-                className="text-red-600 flex items-center gap-2 hover:bg-red-50 px-4 py-2 rounded-xl transition-colors"
+                className="text-red-600 flex items-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-xl transition-colors"
             >
                 <Trash2 size={18} />
                 Slett måling

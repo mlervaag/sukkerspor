@@ -5,6 +5,12 @@ import { InsulinDoseInput, InsulinDose } from "./types";
 import { computeDayKey } from "@/lib/utils/day-key";
 import { logEvent } from "./event-log";
 
+type InsulinUpdate = Partial<Omit<InsulinDoseInput, "administeredAt">> & {
+    administeredAt?: Date;
+    dayKey?: string;
+    updatedAt: Date;
+};
+
 export async function createInsulinDose(input: InsulinDoseInput): Promise<InsulinDose> {
     const administeredAt = new Date(input.administeredAt);
     const dayKey = computeDayKey(administeredAt);
@@ -24,7 +30,7 @@ export async function createInsulinDose(input: InsulinDoseInput): Promise<Insuli
 }
 
 export async function updateInsulinDose(id: string, input: Partial<InsulinDoseInput>): Promise<InsulinDose> {
-    const updateData: any = { ...input, updatedAt: new Date() };
+    const updateData: InsulinUpdate = { ...input, updatedAt: new Date() };
 
     if (input.administeredAt) {
         const administeredAt = new Date(input.administeredAt);

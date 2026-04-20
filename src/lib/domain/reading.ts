@@ -1,13 +1,18 @@
 import { db } from "@/lib/db";
 import { glucoseReadings } from "@/lib/db/schema";
-import { eq, and, between } from "drizzle-orm";
+import { eq, between } from "drizzle-orm";
 import { ReadingInput, GlucoseReading } from "./types";
 import { computeDayKey } from "@/lib/utils/day-key";
 import { logEvent } from "./event-log";
 import { startOfWeek, endOfWeek } from "date-fns";
 
+type ReadingUpdate = Partial<Omit<ReadingInput, "measuredAt">> & {
+    measuredAt?: Date;
+    dayKey?: string;
+    updatedAt: Date;
+};
+
 export async function createReading(input: ReadingInput): Promise<GlucoseReading> {
-    // Convert string measuredAt to Date for Drizzle timestamp column
     const measuredAt = new Date(input.measuredAt);
     const dayKey = computeDayKey(measuredAt);
 
@@ -15,7 +20,7 @@ export async function createReading(input: ReadingInput): Promise<GlucoseReading
         .insert(glucoseReadings)
         .values({
             ...input,
-            measuredAt, // Use Date object, not the raw string
+            measuredAt,
             dayKey,
         })
         .returning();
@@ -26,10 +31,9 @@ export async function createReading(input: ReadingInput): Promise<GlucoseReading
 }
 
 export async function updateReading(id: string, input: Partial<ReadingInput>): Promise<GlucoseReading> {
-    const updateData: any = { ...input, updatedAt: new Date() };
+    const updateData: ReadingUpdate = { ...input, updatedAt: new Date() };
 
     if (input.measuredAt) {
-        // Convert string measuredAt to Date for Drizzle timestamp column
         const measuredAt = new Date(input.measuredAt);
         updateData.measuredAt = measuredAt;
         updateData.dayKey = computeDayKey(measuredAt);
@@ -55,15 +59,12 @@ export async function listReadingsByDayKey(dayKey: string): Promise<GlucoseReadi
 }
 
 export async function listReadingsByWeek(date: Date): Promise<GlucoseReading[]> {
-    const start = startOfWeek(date, { weekStartsOn: 1 }); // ISO week starts on Monday
+    const start = startOfWeek(date, { weekStartsOn: 1 });
     const end = endOfWeek(date, { weekStartsOn: 1 });
 
-    // Compute day_key range for the week (YYYY-MM-DD format)
     const startDayKey = computeDayKey(start);
     const endDayKey = computeDayKey(end);
 
-    // Filter by day_key (Europe/Oslo date) instead of measuredAt (UTC timestamp)
-    // This ensures readings appear on the correct day regardless of timezone
     return db
         .select()
         .from(glucoseReadings)

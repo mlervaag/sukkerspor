@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { glucoseReadings, insulinDoses } from "@/lib/db/schema";
 import { BackupData } from "./schema";
 import { logEvent } from "../domain/event-log";
-import { GlucoseReading, InsulinDose } from "../domain/types";
 import { getSettings } from "../domain/settings";
 
 export async function exportBackup(): Promise<BackupData> {
@@ -13,8 +12,8 @@ export async function exportBackup(): Promise<BackupData> {
     const backup: BackupData = {
         schema_version: 2,
         exported_at: new Date().toISOString(),
-        readings: readings as any as GlucoseReading[],
-        insulin_doses: doses as any as InsulinDose[],
+        readings,
+        insulin_doses: doses,
         settings: {
             report_language: settings.reportLanguage,
             due_date: settings.dueDate?.toISOString(),

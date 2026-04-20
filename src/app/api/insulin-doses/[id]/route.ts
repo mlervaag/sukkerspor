@@ -4,24 +4,49 @@ import { db } from "@/lib/db";
 import { insulinDoses } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logEvent } from "@/lib/domain/event-log";
+import { validatePartialInsulinDoseInput, ValidationError } from "@/lib/domain/validation";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+export async function GET(req: NextRequest, context: RouteContext) {
+    const { id } = await context.params;
+    try {
+        const dose = await db.query.insulinDoses.findFirst({
+            where: eq(insulinDoses.id, id),
+        });
+
+        if (!dose) {
+            return NextResponse.json({ error: "Insulin dose not found" }, { status: 404 });
+        }
+
+        return NextResponse.json(dose, {
+            headers: { "Cache-Control": "private, no-store" },
+        });
+    } catch (error) {
+        console.error("Failed to fetch insulin dose:", error);
+        return NextResponse.json({ error: "Failed to fetch insulin dose" }, { status: 500 });
+    }
+}
+
 export async function PUT(req: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     try {
-        const input = await req.json();
+        const raw = await req.json();
+        const input = validatePartialInsulinDoseInput(raw);
         await updateInsulinDose(id, input);
 
         return NextResponse.json({ success: true }, {
             headers: { "Cache-Control": "no-store" },
         });
     } catch (error) {
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
         console.error("Failed to update insulin dose:", error);
-        return NextResponse.json({ error: "Update failed" }, { status: 500 });
+        return NextResponse.json({ error: "Kunne ikke oppdatere insulindose" }, { status: 500 });
     }
 }
 
