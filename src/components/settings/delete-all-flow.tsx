@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, AlertOctagon } from "lucide-react";
+import { AlertOctagon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "../ui/confirm-dialog";
+import { useToast } from "../ui/toast";
+
+const PHRASE = "SLETT ALT";
 
 export function DeleteAllFlow() {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [typedText, setTypedText] = useState("");
     const [loading, setLoading] = useState(false);
-
-    const PHRASE = "SLETT ALT";
+    const router = useRouter();
+    const toast = useToast();
 
     async function handleDelete() {
         if (typedText !== PHRASE) return;
@@ -22,11 +26,13 @@ export function DeleteAllFlow() {
 
             if (!res.ok) throw new Error("Delete failed");
 
-            alert(`All data er slettet.`);
-            window.location.reload();
+            setIsConfirmOpen(false);
+            setTypedText("");
+            toast.success("All data er slettet");
+            router.refresh();
         } catch (err) {
             console.error(err);
-            alert("Kunne ikke slette data.");
+            toast.error("Kunne ikke slette data");
         } finally {
             setLoading(false);
         }
@@ -36,7 +42,7 @@ export function DeleteAllFlow() {
         <div className="space-y-4">
             <button
                 onClick={() => setIsConfirmOpen(true)}
-                className="btn-primary bg-red-600 hover:bg-red-700 border-red-600 w-full flex items-center justify-center gap-2"
+                className="btn-destructive w-full flex items-center justify-center gap-2"
             >
                 <AlertOctagon size={18} />
                 Slett all data irreversibelt
@@ -47,7 +53,7 @@ export function DeleteAllFlow() {
                 onClose={() => { setIsConfirmOpen(false); setTypedText(""); }}
                 onConfirm={handleDelete}
                 title="EKSTREM ADVARSEL: Slett alt"
-                message="Dette vil slette ALLE blodsukkermålinger og all historikk permanent. Denne handlingen kan overhodet ikke angres."
+                message="Dette vil slette ALLE blodsukkermålinger og insulindoser permanent. Denne handlingen kan overhodet ikke angres."
                 confirmText="Slett alt permanent"
                 isDestructive
                 loading={loading}

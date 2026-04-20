@@ -13,6 +13,17 @@ export function computeDayKey(date: Date): string {
     return formatter.format(date);
 }
 
+// Returns the hour (0-23) in Europe/Oslo. Needed because Vercel runs in UTC
+// and Date#getHours() would otherwise shift evening doses across DST.
+export function getOsloHour(date: Date): number {
+    const formatter = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Oslo",
+        hour: "2-digit",
+        hour12: false,
+    });
+    return parseInt(formatter.format(date), 10);
+}
+
 export function getISOWeek(date: Date): { year: number; week: number } {
     return {
         year: getISOWeekYear(date),

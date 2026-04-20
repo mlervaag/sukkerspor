@@ -8,6 +8,7 @@ import { nb } from "date-fns/locale";
 import { combineDateAndTime } from "@/lib/utils/date-time";
 import { Trash2 } from "lucide-react";
 import { ConfirmDialog } from "../ui/confirm-dialog";
+import { useToast } from "../ui/toast";
 
 interface InsulinDoseModalProps {
     isOpen: boolean;
@@ -18,6 +19,8 @@ interface InsulinDoseModalProps {
     selectedDate?: Date | null;
 }
 
+const MEAL_CONTEXTS = ["Frokost", "Lunsj", "Middag", "Kveldsmat"] as const;
+
 export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialData, selectedDate }: InsulinDoseModalProps) {
     const [doseUnits, setDoseUnits] = useState("");
     const [time, setTime] = useState(format(new Date(), "HH:mm"));
@@ -27,10 +30,13 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
     const [notes, setNotes] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [canRetry, setCanRetry] = useState(false);
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const toast = useToast();
 
     useEffect(() => {
+        if (!isOpen) return;
         if (initialData) {
             setDoseUnits(initialData.doseUnits.toString());
             setTime(format(new Date(initialData.administeredAt), "HH:mm"));
@@ -39,30 +45,27 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
             setMealContext(initialData.mealContext || "");
             setNotes(initialData.notes || "");
             setError(null);
+            setCanRetry(false);
         } else {
-            resetForm();
+            setTime(format(new Date(), "HH:mm"));
+            setInsulinType("long_acting");
+            setMealContext("");
+            setNotes("");
+            setError(null);
+            setCanRetry(false);
+            if (typeof window !== "undefined") {
+                setDoseUnits(localStorage.getItem("sukkerspor_last_dose") || "");
+                setInsulinName(localStorage.getItem("sukkerspor_insulin_name") || "");
+            } else {
+                setDoseUnits("");
+                setInsulinName("");
+            }
         }
     }, [initialData, isOpen, selectedDate]);
 
-    const resetForm = () => {
-        setTime(format(new Date(), "HH:mm"));
-        setInsulinType("long_acting");
-        setMealContext("");
-        setNotes("");
+    const submit = async () => {
         setError(null);
-        // Pre-fill from last used values in localStorage
-        if (typeof window !== "undefined") {
-            setDoseUnits(localStorage.getItem("sukkerspor_last_dose") || "");
-            setInsulinName(localStorage.getItem("sukkerspor_insulin_name") || "");
-        } else {
-            setDoseUnits("");
-            setInsulinName("");
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
+        setCanRetry(false);
 
         const dateToUse = initialData ? new Date(initialData.administeredAt) : (selectedDate || new Date());
         const dateStr = format(dateToUse, "yyyy-MM-dd");
@@ -81,7 +84,7 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
         }
 
         if (numericDose <= 0 || numericDose > 200) {
-            setError("Dosen virker uvanlig. Sjekk at den er riktig.");
+            setError("Dosen må være mellom 0,1 og 200 enheter.");
             return;
         }
 
@@ -94,7 +97,6 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
         setLoading(true);
 
         try {
-            // Save values to localStorage for next time
             if (typeof window !== "undefined") {
                 if (insulinName) localStorage.setItem("sukkerspor_insulin_name", insulinName);
                 localStorage.setItem("sukkerspor_last_dose", numericDose.toFixed(1));
@@ -109,11 +111,25 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
                 notes: notes || null,
             });
             onClose();
-        } catch (err: any) {
-            setError(err.message || "Noe gikk galt ved lagring.");
+        } catch (err) {
+            const isNetworkError =
+                err instanceof TypeError ||
+                (err instanceof Error && /network|fetch|offline/i.test(err.message));
+            if (isNetworkError) {
+                setError("Kunne ikke kontakte serveren. Sjekk internett og prøv igjen.");
+                setCanRetry(true);
+            } else {
+                setError(err instanceof Error ? err.message : "Lagring feilet. Prøv igjen.");
+                setCanRetry(true);
+            }
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await submit();
     };
 
     const handleDelete = async () => {
@@ -122,9 +138,10 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
         try {
             await onDelete(initialData.id);
             setIsConfirmDeleteOpen(false);
+            toast.success("Insulindose slettet");
             onClose();
         } catch {
-            alert("Kunne ikke slette insulindosen.");
+            toast.error("Kunne ikke slette insulindosen");
         } finally {
             setDeleteLoading(false);
         }
@@ -140,10 +157,11 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
         >
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                    <label htmlFor="insulin-dose" className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                         Dose (enheter)
                     </label>
                     <input
+                        id="insulin-dose"
                         type="number"
                         step="0.5"
                         inputMode="decimal"
@@ -161,16 +179,27 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
                 </div>
 
                 {error && (
-                    <div className="p-3 rounded-xl bg-red-50 text-red-600 text-sm border border-red-100">
-                        {error}
+                    <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 text-sm border border-red-100 dark:border-red-900 space-y-2">
+                        <p>{error}</p>
+                        {canRetry && (
+                            <button
+                                type="button"
+                                onClick={() => submit()}
+                                disabled={loading}
+                                className="text-sm font-medium underline underline-offset-2 hover:no-underline disabled:opacity-60"
+                            >
+                                Prøv igjen
+                            </button>
+                        )}
                     </div>
                 )}
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                    <label htmlFor="insulin-time" className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                         Tidspunkt
                     </label>
                     <input
+                        id="insulin-time"
                         type="time"
                         value={time}
                         onChange={(e) => setTime(e.target.value)}
@@ -180,23 +209,25 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                    <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                         Insulintype
-                    </label>
-                    <div className="flex gap-4">
+                    </span>
+                    <div className="flex gap-4" role="radiogroup" aria-label="Insulintype">
                         <button
                             type="button"
+                            role="radio"
+                            aria-checked={insulinType === "long_acting"}
                             onClick={() => setInsulinType("long_acting")}
-                            className={`flex-1 py-3 rounded-xl border-2 transition-all font-medium ${insulinType === "long_acting" ? "bg-violet-50 dark:bg-violet-900/30 border-violet-500 text-violet-700 dark:text-violet-300" : "border-border text-muted-foreground"
-                                }`}
+                            className={`flex-1 py-3 rounded-xl border-2 transition-all font-medium ${insulinType === "long_acting" ? "bg-violet-50 dark:bg-violet-900/30 border-violet-500 text-violet-700 dark:text-violet-300" : "border-border text-muted-foreground"}`}
                         >
                             Langtidsvirkende
                         </button>
                         <button
                             type="button"
+                            role="radio"
+                            aria-checked={insulinType === "rapid_acting"}
                             onClick={() => setInsulinType("rapid_acting")}
-                            className={`flex-1 py-3 rounded-xl border-2 transition-all font-medium ${insulinType === "rapid_acting" ? "bg-violet-50 dark:bg-violet-900/30 border-violet-500 text-violet-700 dark:text-violet-300" : "border-border text-muted-foreground"
-                                }`}
+                            className={`flex-1 py-3 rounded-xl border-2 transition-all font-medium ${insulinType === "rapid_acting" ? "bg-violet-50 dark:bg-violet-900/30 border-violet-500 text-violet-700 dark:text-violet-300" : "border-border text-muted-foreground"}`}
                         >
                             Hurtigvirkende
                         </button>
@@ -204,32 +235,33 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                    <label htmlFor="insulin-name" className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                         Insulinnavn (valgfritt)
                     </label>
                     <input
+                        id="insulin-name"
                         type="text"
                         value={insulinName}
                         onChange={(e) => setInsulinName(e.target.value)}
                         onFocus={(e) => e.target.select()}
                         className="input w-full"
                         placeholder="F.eks. Insulatard, NovoRapid..."
+                        maxLength={100}
                     />
                 </div>
 
                 {insulinType === "rapid_acting" && (
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                             Til måltid
-                        </label>
+                        </span>
                         <div className="flex flex-wrap gap-2">
-                            {["Frokost", "Lunsj", "Middag", "Kveldsmat"].map((m) => (
+                            {MEAL_CONTEXTS.map((m) => (
                                 <button
                                     key={m}
                                     type="button"
-                                    onClick={() => setMealContext(m)}
-                                    className={`px-4 py-2 rounded-full border text-sm transition-all ${mealContext === m ? "bg-violet-600 text-white border-violet-600" : "border-border text-muted-foreground"
-                                        }`}
+                                    onClick={() => setMealContext(mealContext === m ? "" : m)}
+                                    className={`px-4 py-2 rounded-full border text-sm transition-all ${mealContext === m ? "bg-violet-600 text-white border-violet-600" : "border-border text-muted-foreground"}`}
                                 >
                                     {m}
                                 </button>
@@ -239,14 +271,16 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
                 )}
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                    <label htmlFor="insulin-notes" className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                         Notater
                     </label>
                     <textarea
+                        id="insulin-notes"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         className="input w-full min-h-[80px] resize-none"
                         placeholder="Eventuelle notater..."
+                        maxLength={2000}
                     />
                 </div>
 
@@ -255,7 +289,7 @@ export function InsulinDoseModal({ isOpen, onClose, onSubmit, onDelete, initialD
                         <button
                             type="button"
                             onClick={() => setIsConfirmDeleteOpen(true)}
-                            className="text-red-600 flex items-center gap-2 hover:bg-red-50 px-4 py-2 rounded-xl transition-colors"
+                            className="text-red-600 flex items-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-xl transition-colors"
                         >
                             <Trash2 size={18} />
                             Slett

@@ -33,8 +33,8 @@ export async function getReportData(range: ReportRange, date: Date = new Date())
         end = endOfMonth(date);
     }
 
-    let readings;
-    let doses: any[] = [];
+    let readings: GlucoseReading[];
+    let doses: InsulinDose[] = [];
     if (start && end) {
         readings = await db
             .select()
@@ -47,8 +47,8 @@ export async function getReportData(range: ReportRange, date: Date = new Date())
                 .from(insulinDoses)
                 .where(between(insulinDoses.administeredAt, start, end))
                 .orderBy(asc(insulinDoses.administeredAt));
-        } catch {
-            // insulin_doses table may not exist yet
+        } catch (err) {
+            console.warn("Failed to load insulin doses for report:", err);
         }
     } else {
         readings = await db
@@ -60,17 +60,16 @@ export async function getReportData(range: ReportRange, date: Date = new Date())
                 .select()
                 .from(insulinDoses)
                 .orderBy(asc(insulinDoses.administeredAt));
-        } catch {
-            // insulin_doses table may not exist yet
+        } catch (err) {
+            console.warn("Failed to load insulin doses for report:", err);
         }
     }
 
-    const typedReadings = readings as any as GlucoseReading[];
-    const stats = calculateStats(typedReadings);
+    const stats = calculateStats(readings);
 
     return {
-        readings: typedReadings,
-        insulinDoses: doses as any as InsulinDose[],
+        readings,
+        insulinDoses: doses,
         stats,
         range,
         start,

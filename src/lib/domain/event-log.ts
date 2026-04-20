@@ -8,17 +8,17 @@ export async function logEvent(
     eventType: EventType,
     entityType: EntityType,
     entityId?: string,
-    payload?: any
+    payload?: unknown
 ) {
     try {
         await db.insert(eventLog).values({
             eventType,
             entityType,
             entityId,
-            payload: payload ? JSON.stringify(payload) : null,
+            payload: payload !== undefined ? JSON.stringify(payload) : null,
         });
     } catch (error) {
+        // Event logging is best-effort; never block the main flow.
         console.error("Failed to log event:", error);
-        // We don't want event logging failures to block the main flow
     }
 }

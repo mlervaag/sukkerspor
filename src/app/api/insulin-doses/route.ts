@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createInsulinDose, listInsulinDosesByDayKeyRange } from "@/lib/domain/insulin-dose";
+import { validateInsulinDoseInput, ValidationError } from "@/lib/domain/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,10 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Invalid dayKey format" }, { status: 400 });
         }
 
+        if (startDayKey > endDayKey) {
+            return NextResponse.json({ error: "startDayKey must be <= endDayKey" }, { status: 400 });
+        }
+
         const doses = await listInsulinDosesByDayKeyRange(startDayKey, endDayKey);
         return NextResponse.json(doses, {
             headers: { "Cache-Control": "private, no-store" },
@@ -31,7 +36,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const input = await req.json();
+        const raw = await req.json();
+        const input = validateInsulinDoseInput(raw);
         const dose = await createInsulinDose(input);
 
         return NextResponse.json(dose, {
@@ -39,7 +45,10 @@ export async function POST(req: NextRequest) {
             headers: { "Cache-Control": "no-store" },
         });
     } catch (error) {
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
         console.error("Failed to create insulin dose:", error);
-        return NextResponse.json({ error: "Failed to create insulin dose" }, { status: 400 });
+        return NextResponse.json({ error: "Kunne ikke lagre insulindose" }, { status: 500 });
     }
 }

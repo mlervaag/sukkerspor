@@ -2,13 +2,18 @@
 
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { ConfirmDialog } from "../ui/confirm-dialog";
 import { format } from "date-fns";
+import { nb } from "date-fns/locale";
+import { useRouter } from "next/navigation";
+import { ConfirmDialog } from "../ui/confirm-dialog";
+import { useToast } from "../ui/toast";
 
 export function DeleteDayFlow() {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
     const [loading, setLoading] = useState(false);
+    const router = useRouter();
+    const toast = useToast();
 
     async function handleDelete() {
         setLoading(true);
@@ -19,11 +24,13 @@ export function DeleteDayFlow() {
 
             if (!res.ok) throw new Error("Delete failed");
 
-            alert(`Slettet alle målinger for ${date}`);
+            const readable = format(new Date(date), "d. MMMM yyyy", { locale: nb });
+            toast.success(`Slettet alle oppføringer for ${readable}`);
             setIsConfirmOpen(false);
+            router.refresh();
         } catch (err) {
             console.error(err);
-            alert("Kunne ikke slette data.");
+            toast.error("Kunne ikke slette data");
         } finally {
             setLoading(false);
         }
@@ -33,10 +40,11 @@ export function DeleteDayFlow() {
         <div className="space-y-3">
             <div className="space-y-4 pt-2">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground block">
+                    <label htmlFor="delete-day-date" className="text-sm font-medium text-muted-foreground block">
                         Velg dato
                     </label>
                     <input
+                        id="delete-day-date"
                         type="date"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
@@ -58,7 +66,7 @@ export function DeleteDayFlow() {
                 onClose={() => setIsConfirmOpen(false)}
                 onConfirm={handleDelete}
                 title="Slett data for dag"
-                message={`Er du sikker på at du vil slette ALLE målinger for ${date}? Dette kan ikke angres.`}
+                message={`Er du sikker på at du vil slette ALLE målinger og insulindoser for ${format(new Date(date), "d. MMMM yyyy", { locale: nb })}? Dette kan ikke angres.`}
                 confirmText="Slett dag"
                 isDestructive
                 loading={loading}

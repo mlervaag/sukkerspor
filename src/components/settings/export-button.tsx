@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { Download } from "lucide-react";
+import { useToast } from "../ui/toast";
 
 export function ExportButton() {
     const [loading, setLoading] = useState(false);
+    const toast = useToast();
 
     async function handleExport() {
         setLoading(true);
@@ -17,7 +19,6 @@ export function ExportButton() {
             const a = document.createElement("a");
             a.href = url;
 
-            // Extract filename from header if possible, else fallback
             const disposition = res.headers.get("Content-Disposition");
             const filenameMatch = disposition?.match(/filename="(.+)"/);
             const filename = filenameMatch ? filenameMatch[1] : "sukkerspor_backup.json";
@@ -27,9 +28,10 @@ export function ExportButton() {
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
+            toast.success("Backup lastet ned");
         } catch (error) {
             console.error(error);
-            alert("Kunne ikke eksportere data.");
+            toast.error("Kunne ikke eksportere data");
         } finally {
             setLoading(false);
         }

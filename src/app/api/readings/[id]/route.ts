@@ -4,9 +4,10 @@ import { db } from "@/lib/db";
 import { glucoseReadings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logEvent } from "@/lib/domain/event-log";
+import { validatePartialReadingInput, ValidationError } from "@/lib/domain/validation";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs"; // Required for transaction support
+export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -22,11 +23,10 @@ export async function GET(req: NextRequest, context: RouteContext) {
         }
 
         return NextResponse.json(reading, {
-            headers: {
-                "Cache-Control": "private, no-store",
-            },
+            headers: { "Cache-Control": "private, no-store" },
         });
     } catch (error) {
+        console.error("Failed to fetch reading:", error);
         return NextResponse.json({ error: "Failed to fetch reading" }, { status: 500 });
     }
 }
@@ -34,14 +34,19 @@ export async function GET(req: NextRequest, context: RouteContext) {
 export async function PUT(req: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     try {
-        const input = await req.json();
-        const reading = await updateReading(id, input);
+        const raw = await req.json();
+        const input = validatePartialReadingInput(raw);
+        await updateReading(id, input);
 
         return NextResponse.json({ success: true }, {
-            headers: { "Cache-Control": "no-store" }
+            headers: { "Cache-Control": "no-store" },
         });
     } catch (error) {
-        return NextResponse.json({ error: "Update failed" }, { status: 500 });
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+        console.error("Update reading failed:", error);
+        return NextResponse.json({ error: "Kunne ikke oppdatere måling" }, { status: 500 });
     }
 }
 
@@ -49,26 +54,24 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     try {
         const { id } = await context.params;
 
-        // Fetch for logging before deletion
         const reading = await db.query.glucoseReadings.findFirst({
-            where: eq(glucoseReadings.id, id)
+            where: eq(glucoseReadings.id, id),
         });
 
         if (!reading) {
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
-        // Transactional delete + log for atomicity
         await db.transaction(async (tx) => {
             await tx.delete(glucoseReadings).where(eq(glucoseReadings.id, id));
             await logEvent("delete", "glucose_reading", id, {
                 measuredAt: reading.measuredAt,
-                value: reading.valueMmolL
+                value: reading.valueMmolL,
             });
         });
 
         return NextResponse.json({ success: true }, {
-            headers: { "Cache-Control": "no-store" }
+            headers: { "Cache-Control": "no-store" },
         });
     } catch (error) {
         console.error("Delete failed:", error);

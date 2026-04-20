@@ -21,11 +21,9 @@ export async function POST(req: NextRequest) {
                 "Cache-Control": "no-store",
             }
         });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Import failed:", error);
-        return NextResponse.json(
-            { error: error.message || "Import failed" },
-            { status: 400 }
-        );
+        const message = error instanceof Error ? error.message : "Import failed";
+        return NextResponse.json({ error: message }, { status: 400 });
     }
 }
